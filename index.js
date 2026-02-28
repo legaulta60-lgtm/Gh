@@ -5,7 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ====== EDIT THESE ======
-const SHEET_ID = "https://docs.google.com/spreadsheets/d/1JTF9jG30t7eDZ_RZ-A-HPlakkLRb5JoGBdyF3K0qKnw/edit?usp=drivesdk";
+const SHEET_ID = "1JTF9jG30t7eDZ_RZ-A-HPlakkLRb5JoGBdyF3K0qKnw";
 const WEBHOOK_URL = "https://discord.com/api/webhooks/1477010156293455904/W5U3CnCM4CoJvjWwNO17-7a6RxMAAg9wwG4V2fbajfteZD3AQxUtqtwLHS4rZgZv_LEY";
 // ========================
 
