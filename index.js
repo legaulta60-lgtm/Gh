@@ -63,9 +63,9 @@ app.get("/standings-preview", async (req, res) => {
     const response = await axios.get(url);
     const rows = response.data;
 
-    const standings = rows
-      .slice(9)
-      .filter(r => r.Team && r.Team !== "Team");
+    const standings = rows.filter(r => 
+  (r.Team || "").trim() && r.Team.trim().toLowerCase() !== "team"
+);
 
     let message = "📊 **LEAGUE STANDINGS**\n\n";
 
