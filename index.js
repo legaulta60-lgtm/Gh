@@ -4,159 +4,139 @@ const axios = require("axios");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-/* ============================= */
-/* 🔑 CONFIG — EDIT THESE ONLY  */
-/* ============================= */
-
-// ====== EDIT THESE ======
+// ====================== EDIT THESE ======================
 const SHEET_ID = "1JTF9jG30t7eDZ_RZ-A-HPlakkLRb5JoGBdyF3K0qKnw";
 const WEBHOOK_URL = "https://discord.com/api/webhooks/1477010156293455904/W5U3CnCM4CoJvjWwNO17-7a6RxMAAg9wwG4V2fbajfteZD3AQxUtqtwLHS4rZgZv_LEY";
-// ========================
 
-/* ============================= */
-/* ⏱ Cooldown Protection        */
-/* ============================= */
+// Prevent random people/refreshes from posting to Discord.
+// To post: /standings?key=YOUR_KEY
+const SECRET_KEY = "PASTE_A_SECRET_KEY_HERE";
+
+// Cooldown to prevent Discord/Cloudflare rate limit
+const COOLDOWN_MS = 60 * 1000; // 1 minute
+// =======================================================
 
 let lastPostTime = 0;
-const COOLDOWN_MS = 60 * 1000; // 1 minute cooldown
 
-/* ============================= */
-/* Root Route                   */
-/* ============================= */
+const normalize = (v) =>
+  String(v || "")
+    .replace(/\u00A0/g, " ")   // non-breaking spaces -> spaces
+    .replace(/\s+/g, " ")      // collapse whitespace
+    .trim()
+    .toLowerCase();
+
+// Takes OpenSheet rows and returns ONLY the bottom (sorted) table
+function getBottomStandingsTable(rows) {
+  // Find the LAST header row where Team == "team"
+  let lastHeaderIndex = -1;
+  rows.forEach((r, idx) => {
+    if (normalize(r.Team) === "team") lastHeaderIndex = idx;
+  });
+
+  // Use only rows after the last header
+  const tableRows = lastHeaderIndex >= 0 ? rows.slice(lastHeaderIndex + 1) : rows;
+
+  // Keep only valid team rows
+  const finalStandings = tableRows.filter((r) => {
+    const team = normalize(r.Team);
+    return team && team !== "team";
+  });
+
+  return finalStandings;
+}
+
+async function fetchRows() {
+  const url = `https://opensheet.elk.sh/${SHEET_ID}/Standings`;
+  const response = await axios.get(url, { timeout: 15000 });
+  return response.data;
+}
+
+function buildMessage(finalStandings) {
+  let message = "📊 **LEAGUE STANDINGS**\n\n";
+
+  finalStandings.forEach((r, i) => {
+    message += `${i + 1}. **${r.Team}** — ${r.Points} pts (GP:${r.GP} W:${r.W} L:${r.L} OTL:${r.OTL})\n`;
+  });
+
+  return message;
+}
+
+// ====================== ROUTES ======================
 
 app.get("/", (req, res) => {
   res.send("Bot is alive.");
 });
 
-/* ============================= */
-/* Debug Sheet Route            */
-/* ============================= */
-
+// Shows what OpenSheet is returning so we can debug headers + rows
 app.get("/debug-sheet", async (req, res) => {
   try {
-    const url = `https://opensheet.elk.sh/${SHEET_ID}/Standings`;
-    const response = await axios.get(url);
-    const rows = response.data;
+    const rows = await fetchRows();
+    const finalStandings = getBottomStandingsTable(rows);
 
     res.json({
-      totalRows: rows.length,
+      opensheetRowCount: rows.length,
       firstRowKeys: rows[0] ? Object.keys(rows[0]) : null,
       sampleRow0: rows[0] || null,
-      sampleRow9: rows[9] || null
+      sampleRow1: rows[1] || null,
+      bottomTableCount: finalStandings.length,
+      bottomTableTeams: finalStandings.map((r) => r.Team),
     });
   } catch (err) {
     res.status(500).json({
       message: err?.message,
       status: err?.response?.status,
-      data: err?.response?.data
+      data: err?.response?.data,
     });
   }
 });
 
-/* ============================= */
-/* Standings Preview (SAFE)     */
-/* ============================= */
-
+// Safe preview (no posting)
 app.get("/standings-preview", async (req, res) => {
   try {
-    const url = `https://opensheet.elk.sh/${SHEET_ID}/Standings`;
-    const response = await axios.get(url);
-    // Normalize helper (handles weird spaces)
-const norm = (v) =>
-  String(v || "")
-    .replace(/\u00A0/g, " ")   // non-breaking spaces -> regular spaces
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
+    const rows = await fetchRows();
+    const finalStandings = getBottomStandingsTable(rows);
 
-// Find the LAST header row (where Team == "team")
-let lastHeaderIndex = -1;
-rows.forEach((r, idx) => {
-  if (norm(r.Team) === "team") lastHeaderIndex = idx;
-});
+    if (finalStandings.length === 0) {
+      return res.type("text/plain").send("No standings rows found in bottom table.");
+    }
 
-// Take only rows AFTER the last header (this is your sorted table)
-const tableRows = (lastHeaderIndex >= 0 ? rows.slice(lastHeaderIndex + 1) : rows);
-
-// Now keep only valid rows with a real team name
-const finalStandings = tableRows.filter(r => {
-  const team = norm(r.Team);
-  return team && team !== "team";
-});
- const finalStandings = [];
-const seen = new Set();
-
-const normalizeTeam = (name) =>
-  String(name || "")
-    .replace(/\u00A0/g, " ")   // converts non-breaking spaces
-    .trim()
-    .toLowerCase();
-
-for (const r of standings) {
-  const key = normalizeTeam(r.Team);
-  if (!key) continue;
-  // keep the LAST occurrence instead of the first
-if (seen.has(key)) {
-  const idx = finalStandings.findIndex(x => normalizeTeam(x.Team) === key);
-  finalStandings[idx] = r;
-  continue;
-}
-  seen.add(key);
-  finalStandings.push(r);
-}
-
-// Debug: show what we kept
-console.log("Unique teams:", finalStandings.map(r => r.Team));
-    
-    let message = "📊 **LEAGUE STANDINGS**\n\n";
-
-    finalstandings.forEach((r, i) => {
-      message += `${i + 1}. **${r.Team}** — ${r.Points} pts (GP:${r.GP} W:${r.W} L:${r.L} OTL:${r.OTL})\n`;
-    });
-
+    const message = buildMessage(finalStandings);
     res.type("text/plain").send(message);
-
   } catch (err) {
-    res.status(500).send(err?.message || "Preview error");
+    res.status(500).type("text/plain").send(err?.message || "Preview error");
   }
 });
 
-/* ============================= */
-/* Post Standings to Discord    */
-/* ============================= */
-
+// Posts to Discord (protected + cooldown)
 app.get("/standings", async (req, res) => {
   try {
+    // Secret key protection
+    if (req.query.key !== SECRET_KEY) {
+      return res.status(403).send("Forbidden. Add ?key=YOUR_SECRET_KEY");
+    }
+
+    // Cooldown protection
     const now = Date.now();
-
-    if (now - lastPostTime < COOLDOWN_MS) {
-      return res.send("Cooldown active. Try again in a minute.");
+    const remaining = COOLDOWN_MS - (now - lastPostTime);
+    if (remaining > 0) {
+      return res
+        .status(200)
+        .send(`Cooldown active. Try again in ${Math.ceil(remaining / 1000)}s.`);
     }
 
-    const url = `https://opensheet.elk.sh/${SHEET_ID}/Standings`;
-    const response = await axios.get(url);
-    const rows = response.data;
+    const rows = await fetchRows();
+    const finalStandings = getBottomStandingsTable(rows);
 
-    const standings = rows
-      .slice(9)
-      .filter(r => r.Team && r.Team !== "Team");
-
-    if (standings.length === 0) {
-      return res.send("No standings found.");
+    if (finalStandings.length === 0) {
+      return res.status(200).send("No standings rows found in bottom table.");
     }
 
-    let message = "📊 **LEAGUE STANDINGS**\n\n";
+    const message = buildMessage(finalStandings);
 
-    finalStandings.forEach((r, i) => {
-      message += `${i + 1}. **${r.Team}** — ${r.Points} pts (GP:${r.GP} W:${r.W} L:${r.L} OTL:${r.OTL})\n`;
-    });
-
-    await axios.post(WEBHOOK_URL, { content: message });
+    await axios.post(WEBHOOK_URL, { content: message }, { timeout: 15000 });
 
     lastPostTime = Date.now();
-
-    res.send("Standings posted successfully.");
-
+    res.send("Standings posted.");
   } catch (err) {
     console.log("===== STANDINGS ERROR START =====");
     console.log("Message:", err?.message);
@@ -170,7 +150,7 @@ app.get("/standings", async (req, res) => {
   }
 });
 
-/* ============================= */
+// ====================== START SERVER ======================
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
