@@ -5,7 +5,7 @@ const PORT = process.env.PORT || 3000;
 
 const SHEET_ID = "1JTF9jG30t7eDZ_RZ-A-HPlakkLRb5JoGBdyF3K0qKnw";
 const TAB_NAME = "FinalStandings";
-const WEBHOOK_URL = "https://discord.com/api/webhooks/1477010156293455904/W5U3CnCM4CoJvjWwNO17-7a6RxMAAg9wwG4V2fbajfteZD3AQxUtqtwLHS4rZgZv_LEY";
+const WEBHOOK_URL = "https://discord.com/api/webhooks/1477604168926757004/is46oXGixwwrSU33LuGse7jozDG2Yf-sIosqCMEACTolqcOM6Wt8sLGVW2xQllbUEfz8";
 const SECRET_KEY = "SWstock58";
 
 let lastPostTime = 0;
