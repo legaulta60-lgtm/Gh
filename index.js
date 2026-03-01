@@ -66,15 +66,30 @@ app.get("/standings-preview", async (req, res) => {
     const standings = rows.filter(r => 
   (r.Team || "").trim() && r.Team.trim().toLowerCase() !== "team"
 );
-const finalStandings = [];
+ const finalStandings = [];
 const seen = new Set();
 
+const normalizeTeam = (name) =>
+  String(name || "")
+    .replace(/\u00A0/g, " ")   // converts non-breaking spaces
+    .trim()
+    .toLowerCase();
+
 for (const r of standings) {
-  const name = (r.Team || "").trim().toLowerCase();
-  if (seen.has(name)) continue;
-  seen.add(name);
+  const key = normalizeTeam(r.Team);
+  if (!key) continue;
+  // keep the LAST occurrence instead of the first
+if (seen.has(key)) {
+  const idx = finalStandings.findIndex(x => normalizeTeam(x.Team) === key);
+  finalStandings[idx] = r;
+  continue;
+}
+  seen.add(key);
   finalStandings.push(r);
 }
+
+// Debug: show what we kept
+console.log("Unique teams:", finalStandings.map(r => r.Team));
     
     let message = "📊 **LEAGUE STANDINGS**\n\n";
 
