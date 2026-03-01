@@ -31,7 +31,7 @@ function getStandings(rows) {
     (r.Team || "").trim() &&
     (r.Team || "").trim().toLowerCase() !== "team"
   );
-  
+}  
   // Use only rows after the last header
   const tableRows = lastHeaderIndex >= 0 ? rows.slice(lastHeaderIndex + 1) : rows;
 
@@ -42,7 +42,7 @@ function getStandings(rows) {
   });
 
   return finalStandings;
-}
+
 
 async function fetchRows() {
   const url = `https://opensheet.elk.sh/${SHEET_ID}/FinalStandings`;
@@ -70,7 +70,7 @@ app.get("/", (req, res) => {
 app.get("/debug-sheet", async (req, res) => {
   try {
     const rows = await fetchRows();
-    const finalStandings = getBottomStandingsTable(rows);
+    const finalStandings = getStandings(rows);
 
     res.json({
       opensheetRowCount: rows.length,
@@ -93,7 +93,7 @@ app.get("/debug-sheet", async (req, res) => {
 app.get("/standings-preview", async (req, res) => {
   try {
     const rows = await fetchRows();
-    const finalStandings = getBottomStandingsTable(rows);
+    const finalStandings = getStandings(rows);
 
     if (finalStandings.length === 0) {
       return res.type("text/plain").send("No standings rows found in bottom table.");
@@ -124,7 +124,7 @@ app.get("/standings", async (req, res) => {
     }
 
     const rows = await fetchRows();
-    const finalStandings = getBottomStandingsTable(rows);
+    const finalStandings = getStandings(rows);
 
     if (finalStandings.length === 0) {
       return res.status(200).send("No standings rows found in bottom table.");
