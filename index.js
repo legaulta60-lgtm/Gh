@@ -31,7 +31,7 @@ function getStandings(rows) {
     (r.Team || "").trim() &&
     (r.Team || "").trim().toLowerCase() !== "team"
   );
-}
+  
   // Use only rows after the last header
   const tableRows = lastHeaderIndex >= 0 ? rows.slice(lastHeaderIndex + 1) : rows;
 
