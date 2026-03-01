@@ -52,8 +52,6 @@ app.get("/standings-preview", async (req, res) => {
 });
 
 // all your constants up here
-const SECRET_KEY = "...";
-const WEBHOOK_URL = "...";
 
 let lastPostTime = 0;
 const COOLDOWN_MS = 10 * 60 * 1000;
