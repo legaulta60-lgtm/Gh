@@ -26,13 +26,12 @@ const normalize = (v) =>
     .toLowerCase();
 
 // Takes OpenSheet rows and returns ONLY the bottom (sorted) table
-function getBottomStandingsTable(rows) {
-  // Find the LAST header row where Team == "team"
-  let lastHeaderIndex = -1;
-  rows.forEach((r, idx) => {
-    if (normalize(r.Team) === "team") lastHeaderIndex = idx;
-  });
-
+function getStandings(rows) {
+  return rows.filter(r =>
+    (r.Team || "").trim() &&
+    (r.Team || "").trim().toLowerCase() !== "team"
+  );
+}
   // Use only rows after the last header
   const tableRows = lastHeaderIndex >= 0 ? rows.slice(lastHeaderIndex + 1) : rows;
 
