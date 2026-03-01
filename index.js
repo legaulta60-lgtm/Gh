@@ -53,7 +53,6 @@ app.get("/standings-preview", async (req, res) => {
 
 // all your constants up here
 
-let lastPostTime = 0;
 const COOLDOWN_MS = 10 * 60 * 1000;
 
 app.use(express.json());
