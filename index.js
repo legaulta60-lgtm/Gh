@@ -32,7 +32,13 @@ content: message
 
 res.send("Standings posted.");
 } catch (err) {
-console.log(err);
+console.log("===== STANDINGS ERROR START =====");
+console.log("Message:", err?.message);
+console.log("Code:", err?.code);
+console.log("Status:", err?.response?.status);
+console.log("Data:", err?.response?.data);
+console.log("Stack:", err?.stack);
+console.log("===== STANDINGS ERROR END =====");
 res.status(500).send("Error posting standings.");
 }
 });
