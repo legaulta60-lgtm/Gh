@@ -10,7 +10,7 @@ const WEBHOOK_URL = "https://discord.com/api/webhooks/1477010156293455904/W5U3Cn
 
 // Prevent random people/refreshes from posting to Discord.
 // To post: /standings?key=YOUR_KEY
-const SECRET_KEY = "PASTE_A_SECRET_KEY_HERE";
+const SECRET_KEY = "SWstock58";
 
 // Cooldown to prevent Discord/Cloudflare rate limit
 const COOLDOWN_MS = 60 * 1000; // 1 minute
