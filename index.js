@@ -61,11 +61,28 @@ app.get("/standings-preview", async (req, res) => {
   try {
     const url = `https://opensheet.elk.sh/${SHEET_ID}/Standings`;
     const response = await axios.get(url);
-    const rows = response.data;
+    // Normalize helper (handles weird spaces)
+const norm = (v) =>
+  String(v || "")
+    .replace(/\u00A0/g, " ")   // non-breaking spaces -> regular spaces
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 
-    const standings = rows.filter(r => 
-  (r.Team || "").trim() && r.Team.trim().toLowerCase() !== "team"
-);
+// Find the LAST header row (where Team == "team")
+let lastHeaderIndex = -1;
+rows.forEach((r, idx) => {
+  if (norm(r.Team) === "team") lastHeaderIndex = idx;
+});
+
+// Take only rows AFTER the last header (this is your sorted table)
+const tableRows = (lastHeaderIndex >= 0 ? rows.slice(lastHeaderIndex + 1) : rows);
+
+// Now keep only valid rows with a real team name
+const finalStandings = tableRows.filter(r => {
+  const team = norm(r.Team);
+  return team && team !== "team";
+});
  const finalStandings = [];
 const seen = new Set();
 
