@@ -51,34 +51,59 @@ app.get("/standings-preview", async (req, res) => {
   }
 });
 
-app.get("/standings", async (req, res) => {
+// all your constants up here
+const SECRET_KEY = "...";
+const WEBHOOK_URL = "...";
+
+let lastPostTime = 0;
+const COOLDOWN_MS = 10 * 60 * 1000;
+
+app.use(express.json());
+
+// 👇 PASTE NEW ROUTE HERE
+
+app.get("/standings", (req, res) => {
+  res.status(405).send("Use POST /standings");
+});
+
+app.post("/standings", async (req, res) => {
   try {
-    if (req.query.key !== SECRET_KEY) {
+    if (req.body.key !== SECRET_KEY)
       return res.status(403).send("Forbidden.");
-    }
 
     const now = Date.now();
-    if (now - lastPostTime < COOLDOWN_MS) {
+    if (now - lastPostTime < COOLDOWN_MS)
       return res.send("Cooldown active.");
-    }
 
     const rows = await fetchRows();
     const standings = getStandings(rows);
 
-    if (!standings.length) {
+    if (!standings.length)
       return res.send("No standings rows found.");
-    }
 
-    await axios.post(WEBHOOK_URL, { content: buildMessage(standings) });
+    const message = buildMessage(standings);
+
+    await axios.post(
+      WEBHOOK_URL,
+      { content: message },
+      {
+        timeout: 15000,
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "league-standings-bot"
+        }
+      }
+    );
 
     lastPostTime = now;
     res.send("Standings posted.");
   } catch (err) {
-    console.log(err);
+    console.log("POST ERROR:", err?.message);
+    console.log("STATUS:", err?.response?.status);
+    console.log("DATA:", err?.response?.data);
     res.status(500).send("Error posting standings.");
   }
 });
-
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
