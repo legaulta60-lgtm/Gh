@@ -46,7 +46,7 @@ function getBottomStandingsTable(rows) {
 }
 
 async function fetchRows() {
-  const url = `https://opensheet.elk.sh/${SHEET_ID}/Standings`;
+  const url = `https://opensheet.elk.sh/${SHEET_ID}/FinalStandings`;
   const response = await axios.get(url, { timeout: 15000 });
   return response.data;
 }
@@ -112,7 +112,7 @@ app.get("/standings", async (req, res) => {
   try {
     // Secret key protection
     if (req.query.key !== SECRET_KEY) {
-      return res.status(403).send("Forbidden. Add ?key=YOUR_SECRET_KEY");
+      return res.status(403).send("Forbidden. Add ?key=SWstock58");
     }
 
     // Cooldown protection
