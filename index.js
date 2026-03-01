@@ -110,7 +110,7 @@ console.log("Unique teams:", finalStandings.map(r => r.Team));
     
     let message = "📊 **LEAGUE STANDINGS**\n\n";
 
-    standings.forEach((r, i) => {
+    finalstandings.forEach((r, i) => {
       message += `${i + 1}. **${r.Team}** — ${r.Points} pts (GP:${r.GP} W:${r.W} L:${r.L} OTL:${r.OTL})\n`;
     });
 
