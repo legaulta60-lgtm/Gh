@@ -66,7 +66,16 @@ app.get("/standings-preview", async (req, res) => {
     const standings = rows.filter(r => 
   (r.Team || "").trim() && r.Team.trim().toLowerCase() !== "team"
 );
+const finalStandings = [];
+const seen = new Set();
 
+for (const r of standings) {
+  const name = (r.Team || "").trim().toLowerCase();
+  if (seen.has(name)) continue;
+  seen.add(name);
+  finalStandings.push(r);
+}
+    
     let message = "📊 **LEAGUE STANDINGS**\n\n";
 
     standings.forEach((r, i) => {
@@ -106,7 +115,7 @@ app.get("/standings", async (req, res) => {
 
     let message = "📊 **LEAGUE STANDINGS**\n\n";
 
-    standings.forEach((r, i) => {
+    finalStandings.forEach((r, i) => {
       message += `${i + 1}. **${r.Team}** — ${r.Points} pts (GP:${r.GP} W:${r.W} L:${r.L} OTL:${r.OTL})\n`;
     });
 
