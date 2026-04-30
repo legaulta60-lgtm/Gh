@@ -654,6 +654,7 @@ const loser = homeScore > awayScore ? awayTeam : homeTeam;
 // =========================
 
 let skaterRows = [];
+const masterRows = [];
 
 let currentSection = "";
 let currentTeamName = "";
