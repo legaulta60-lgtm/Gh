@@ -627,7 +627,10 @@ gameId = line.split(":")[1].trim();
 }
 
 if (line.toLowerCase().startsWith("score:")) {
-const match = line.match(/(.+?)\s+(\d+)\s*-\s*(.+?)\s+(\d+)/);
+const clean = line.replace(/score:/i, "").trim();
+
+const match = clean.match(/(.+?)\s+(\d+)\s*-\s*(.+?)\s+(\d+)/);
+
 if (match) {
 homeTeam = match[1].trim();
 homeScore = Number(match[2]);
@@ -674,6 +677,28 @@ if (stats.includes("L")) {
 goalieL = name;
 }
 }
+
+const linked = await getSheetValues("Linked Players!A:C");
+
+function isLinked(player) {
+return linked.some(row => normalize(row[2]) === normalize(player));
+}
+
+const unlinked = [];
+
+if (goalieW && !isLinked(goalieW)) {
+unlinked.push([gameId, goalieW, winner]);
+}
+
+if (goalieL && !isLinked(goalieL)) {
+unlinked.push([gameId, goalieL, loser]);
+}
+
+if (unlinked.length > 0) {
+await appendSheetValues("Unlinked Players!A:C", unlinked);
+}  
+
+
 }
 
 // =========================
