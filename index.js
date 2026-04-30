@@ -647,6 +647,76 @@ return interaction.editReply("❌ Missing or invalid `Score:` line.");
 const winner = homeScore > awayScore ? homeTeam : awayTeam;
 const loser = homeScore > awayScore ? awayTeam : homeTeam;
 
+
+
+// =========================
+// 🏒 PARSE SKATERS
+// =========================
+
+let skaterRows = [];
+
+let currentSection = "";
+let currentTeamName = "";
+
+for (const line of lines) {
+if (line === "SKATERS") {
+currentSection = "skaters";
+continue;
+}
+
+if (line === "GOALIES") {
+currentSection = "";
+continue;
+}
+
+if (currentSection === "skaters") {
+// Team line
+if (!line.includes(":")) {
+currentTeamName = line;
+continue;
+}
+
+// Player line
+if (line.includes(":")) {
+const [name, stats] = line.split(":").map(s => s.trim());
+
+let goals = 0;
+let assists = 0;
+
+const gMatch = stats.match(/(\d+)G/i);
+const aMatch = stats.match(/(\d+)A/i);
+
+if (gMatch) goals = Number(gMatch[1]);
+if (aMatch) assists = Number(aMatch[1]);
+
+skaterRows.push([
+gameId || "",
+name,
+currentTeamName,
+goals,
+assists,
+0, // BS
+0, // TA
+0, // INT
+0, // saves
+0, // shots against
+0, // W
+0, // L
+0, // SO
+]);
+}
+}
+}
+
+// =========================
+// 📝 WRITE SKATERS TO MASTER STATS
+// =========================
+
+if (skaterRows.length > 0) {
+await appendSheetValues("Master Stats!A:M", skaterRows);
+}
+
+  
 // =========================
 // 🥅 PARSE GOALIES
 // =========================
