@@ -689,20 +689,20 @@ const aMatch = stats.match(/(\d+)A/i);
 if (gMatch) goals = Number(gMatch[1]);
 if (aMatch) assists = Number(aMatch[1]);
 
-skaterRows.push([
-gameId || "",
+masterRows.push([
+"",
 name,
-currentTeamName,
-goals,
-assists,
+currentTeam,
+g,
+a,
 0, // BS
 0, // TA
 0, // INT
-0, // saves
-0, // shots against
-0, // W
-0, // L
-0, // SO
+"", // Saves ❗ MUST BE BLANK
+"", // Shots ❗ MUST BE BLANK
+"", // W
+"", // L
+"" // SO
 ]);
 }
 }
@@ -767,7 +767,19 @@ unlinked.push([gameId, goalieL, loser]);
 if (unlinked.length > 0) {
 await appendSheetValues("Unlinked Players!A:C", unlinked);
 }  
-
+masterRows.push([
+"",
+name,
+currentTeam,
+"", // G ❗ MUST BE BLANK
+"", // A ❗ MUST BE BLANK
+"", "", "",
+saves,
+shots,
+result === "W" ? 1 : 0,
+result === "L" ? 1 : 0,
+0
+]);
 
 }
 
