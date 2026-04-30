@@ -9,7 +9,7 @@ const {
 
 const { google } = require("googleapis");
 
-const fetch = (...args_ => import('node-fetch').then(([defaul: fetch]) => fetch(...args));
+const fetch = (...args) => import('node-fetch').then(([defaul: fetch]) => fetch(...args));
 
 const {
   handleSchedule,
