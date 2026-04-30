@@ -766,42 +766,51 @@ async function createImageFromTemplate(
   const tempSlideId = `TEMP_${Date.now()}`;
 
   const requests = [
-    {
-      duplicateObject: {
-        objectId: sourceSlideId,
-        objectIds: {
-          [sourceSlideId]: tempSlideId,
-        },
-      },
-    },
-    {
-      updateSlidesPosition: {
-        slideObjectIds: [tempSlideId],
-        insertionIndex: 0,
-      },
-    },
-    ...Object.entries(replacements).map(([key, value]) => ({
-      replaceAllText: {
-        containsText: {
-          text: `{{${key}}}`,
-          matchCase: true,
-        },
-        replaceText: String(value ?? ""),
-        pageObjectIds: [tempSlideId],
-      },
-    })),
-    ...Object.entries(imageReplacements).map(([key, imageUrl]) => ({
-      replaceAllShapesWithImage: {
-        containsText: {
-          text: `{{${key}}}`,
-          matchCase: true,
-        },
-        imageUrl,
-        replaceMethod: "CENTER_CROP",
-        pageObjectIds: [tempSlideId],
-      },
-    })),
-  ];
+{
+duplicateObject: {
+objectId: sourceSlideId,
+objectIds: {
+[sourceSlideId]: tempSlideId,
+},
+},
+},
+{
+updateSlidesPosition: {
+slideObjectIds: [tempSlideId],
+insertionIndex: 0,
+},
+},
+];
+
+// ADD TEXT REPLACEMENTS
+Object.entries(replacements).forEach(([key, value]) => {
+requests.push({
+replaceAllText: {
+containsText: {
+text: `{{${key}}}`,
+matchCase: true,
+},
+replaceText: String(value ?? ""),
+pageObjectIds: [tempSlideId],
+},
+});
+});
+
+// ADD IMAGE REPLACEMENTS
+Object.entries(imageReplacements).forEach(([key, imageUrl]) => {
+requests.push({
+replaceAllShapesWithImage: {
+containsText: {
+text: `{{${key}}}`,
+matchCase: true,
+},
+imageUrl,
+replaceMethod: "CENTER_CROP",
+pageObjectIds: [tempSlideId],
+},
+});
+});
+  
 
   try {
     await slides.presentations.batchUpdate({
