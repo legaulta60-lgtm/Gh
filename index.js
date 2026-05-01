@@ -628,7 +628,6 @@ gameId = line.split(":")[1].trim();
 
 if (line.toLowerCase().startsWith("score:")) {
 const clean = line.replace(/score:/i, "").trim();
-
 const match = clean.match(/(.+?)\s+(\d+)\s*-\s*(.+?)\s+(\d+)/);
 
 if (match) {
@@ -641,23 +640,19 @@ awayScore = Number(match[4]);
 }
 
 if (!homeTeam || !awayTeam) {
-return interaction.editReply("❌ Missing or invalid `Score:` line.");
+return interaction.editReply("❌ Invalid score format.");
 }
 
 const winner = homeScore > awayScore ? homeTeam : awayTeam;
 const loser = homeScore > awayScore ? awayTeam : homeTeam;
 
-
-
 // =========================
 // 🏒 PARSE SKATERS
 // =========================
 
-let skaterRows = [];
-const masterRows = [];
-
+let masterRows = [];
 let currentSection = "";
-let currentTeamName = "";
+let currentTeam = "";
 
 for (const line of lines) {
 if (line === "SKATERS") {
@@ -671,14 +666,11 @@ continue;
 }
 
 if (currentSection === "skaters") {
-// Team line
 if (!line.includes(":")) {
-currentTeamName = line;
+currentTeam = line;
 continue;
 }
 
-// Player line
-if (line.includes(":")) {
 const [name, stats] = line.split(":").map(s => s.trim());
 
 let goals = 0;
@@ -691,112 +683,80 @@ if (gMatch) goals = Number(gMatch[1]);
 if (aMatch) assists = Number(aMatch[1]);
 
 masterRows.push([
-"",
+gameId || "",
 name,
 currentTeam,
-g,
-a,
+goals,
+assists,
 0, // BS
 0, // TA
 0, // INT
-"", // Saves ❗ MUST BE BLANK
-"", // Shots ❗ MUST BE BLANK
-"", // W
-"", // L
-"" // SO
+"", "", "", "", "" // goalie stats blank
 ]);
 }
 }
-}
 
-// =========================
-// 📝 WRITE SKATERS TO MASTER STATS
-// =========================
-
-if (skaterRows.length > 0) {
-await appendSheetValues("Master Stats!A:M", skaterRows);
-}
-
-  
 // =========================
 // 🥅 PARSE GOALIES
 // =========================
 
-let section = "";
-let currentTeam = "";
-let goalieW = "";
-let goalieL = "";
+currentSection = "";
+currentTeam = "";
 
 for (const line of lines) {
 if (line === "GOALIES") {
-section = "goalies";
+currentSection = "goalies";
 continue;
 }
 
-if (section === "goalies" && !line.includes(":")) {
+if (currentSection === "goalies") {
+if (!line.includes(":")) {
 currentTeam = line;
 continue;
 }
 
-if (section === "goalies" && line.includes(":")) {
 const [name, stats] = line.split(":").map(s => s.trim());
 
-if (stats.includes("W")) {
-goalieW = name;
-}
-if (stats.includes("L")) {
-goalieL = name;
-}
-}
+let saves = 0;
+let shots = 0;
 
-const linked = await getSheetValues("Linked Players!A:C");
-
-function isLinked(player) {
-return linked.some(row => normalize(row[2]) === normalize(player));
+const saveMatch = stats.match(/(\d+)\/(\d+)/);
+if (saveMatch) {
+saves = Number(saveMatch[1]);
+shots = Number(saveMatch[2]);
 }
 
-const unlinked = [];
+const isWin = stats.includes("W");
+const isLoss = stats.includes("L");
 
-if (goalieW && !isLinked(goalieW)) {
-unlinked.push([gameId, goalieW, winner]);
-}
-
-if (goalieL && !isLinked(goalieL)) {
-unlinked.push([gameId, goalieL, loser]);
-}
-
-if (unlinked.length > 0) {
-await appendSheetValues("Unlinked Players!A:C", unlinked);
-}  
 masterRows.push([
-"",
+gameId || "",
 name,
 currentTeam,
-"", // G ❗ MUST BE BLANK
-"", // A ❗ MUST BE BLANK
-"", "", "",
+"", "", "", "", "", // skater stats blank
 saves,
 shots,
-result === "W" ? 1 : 0,
-result === "L" ? 1 : 0,
+isWin ? 1 : 0,
+isLoss ? 1 : 0,
 0
 ]);
-
+}
 }
 
 // =========================
-// 📝 ADD TO GAME RESULTS TAB
+// 📝 WRITE MASTER STATS
+// =========================
+
+if (masterRows.length > 0) {
+await appendSheetValues("Master Stats!A:M", masterRows);
+}
+
+// =========================
+// 📝 GAME RESULTS
 // =========================
 
 await appendSheetValues("Game Results!A2:F", [
-[
-gameId || "",
-homeTeam,
-awayTeam,
-homeScore,
-awayScore,
-winner,
-],
+[gameId || "", homeTeam, awayTeam, homeScore, awayScore, winner],
 ]);
 
 // =========================
@@ -805,7 +765,7 @@ winner,
 
 const standings = await getSheetValues("Standings!K1:S50");
 
-function updateTeam(teamName, goalsFor, goalsAgainst, isWin) {
+function updateTeam(teamName, gfAdd, gaAdd, isWin) {
 for (let i = 0; i < standings.length; i++) {
 const row = standings[i];
 
@@ -815,8 +775,8 @@ const w = num(row[2]) + (isWin ? 1 : 0);
 const l = num(row[3]) + (isWin ? 0 : 1);
 const otl = num(row[4]);
 const pts = num(row[5]) + (isWin ? 2 : 0);
-const gf = num(row[6]) + goalsFor;
-const ga = num(row[7]) + goalsAgainst;
+const gf = num(row[6]) + gfAdd;
+const ga = num(row[7]) + gaAdd;
 const df = gf - ga;
 
 standings[i] = [teamName, gp, w, l, otl, pts, gf, ga, df];
@@ -828,49 +788,13 @@ updateTeam(homeTeam, homeScore, awayScore, homeScore > awayScore);
 updateTeam(awayTeam, awayScore, homeScore, awayScore > homeScore);
 
 standings.sort((a, b) => num(b[5]) - num(a[5]));
-
 await updateSheetValues("Standings!K1:S50", standings);
 
-// =========================
-// 🥅 ADD GOALIES TO MASTER STATS
-// =========================
-
-const goalieRows = [];
-
-if (goalieW) {
-goalieRows.push([
-gameId || "",
-goalieW,
-winner,
-0,0,0,0,0,
-0,0,
-1,0,0,
-]);
-}
-
-if (goalieL) {
-goalieRows.push([
-gameId || "",
-goalieL,
-loser,
-0,0,0,0,0,
-0,0,
-0,1,0,
-]);
-}
-
-if (goalieRows.length > 0) {
-await appendSheetValues("Master Stats!A:M", goalieRows);
-}
-
-// =========================
-// ✅ DONE
-// =========================
-
 return interaction.editReply(
-`✅ Game recorded: **${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**\n🥅 Goalies updated`
+`✅ Game recorded: **${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**`
 );
 }
+
 
 async function handleNotifyUnlinked(interaction) {
   await interaction.reply("⏳ Checking unlinked players...");
