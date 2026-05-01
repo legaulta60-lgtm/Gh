@@ -666,7 +666,7 @@ continue;
 }
 
 if (line === "GOALIES") {
-currentSection = "";
+currentSection = "goalies";
 continue;
 }
 
