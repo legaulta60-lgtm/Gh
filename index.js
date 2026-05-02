@@ -646,13 +646,8 @@ awayScore = Number(match[4]);
 
 gameId = String(gameId).trim();
 
-if (!gameId) {
-return interaction.editReply("❌ Missing Game ID.");
-}
-
-if (!homeTeam || !awayTeam) {
-return interaction.editReply("❌ Invalid score format.");
-}
+if (!gameId) return interaction.editReply("❌ Missing Game ID.");
+if (!homeTeam || !awayTeam) return interaction.editReply("❌ Invalid score format.");
 
 const winner = homeScore > awayScore ? homeTeam : awayTeam;
 
@@ -660,6 +655,10 @@ const winner = homeScore > awayScore ? homeTeam : awayTeam;
 // 🔗 LINKED PLAYERS
 // =========================
 const linked = await getSheetValues("Linked Players!A:C");
+
+function normalize(str) {
+return String(str).toLowerCase().trim();
+}
 
 function isLinked(player) {
 return linked.some(row => normalize(row[2]) === normalize(player));
@@ -696,20 +695,28 @@ continue;
 
 const [name, stats] = line.split(":").map(s => s.trim());
 
+// =====================
 // 🏒 SKATERS
+// =====================
 if (section === "skaters") {
-let goals = 0;
-let assists = 0;
 
-const gMatch = stats.match(/(\d+)G/i);
-const aMatch = stats.match(/(\d+)A/i);
+let goals = 0, assists = 0, bs = 0, ta = 0, int = 0;
 
-if (gMatch) goals = Number(gMatch[1]);
-if (aMatch) assists = Number(aMatch[1]);
+const g = stats.match(/(\d+)G/i);
+const a = stats.match(/(\d+)A/i);
+const b = stats.match(/(\d+)BS/i);
+const t = stats.match(/(\d+)TA/i);
+const i = stats.match(/(\d+)INT/i);
+
+if (g) goals = Number(g[1]);
+if (a) assists = Number(a[1]);
+if (b) bs = Number(b[1]);
+if (t) ta = Number(t[1]);
+if (i) int = Number(i[1]);
 
 masterRows.push([
 gameId, name, currentTeam,
-goals, assists, 0, 0, 0,
+goals, assists, bs, ta, int,
 "", "", "", "", ""
 ]);
 
@@ -718,6 +725,9 @@ if (!skaterOutput[currentTeam]) skaterOutput[currentTeam] = [];
 let lineText = `${name}:`;
 if (goals) lineText += ` ${goals}G`;
 if (assists) lineText += ` ${assists}A`;
+if (bs) lineText += ` ${bs}BS`;
+if (ta) lineText += ` ${ta}TA`;
+if (int) lineText += ` ${int}INT`;
 
 skaterOutput[currentTeam].push(lineText);
 
@@ -726,8 +736,11 @@ unlinkedRows.push([gameId, name, currentTeam]);
 }
 }
 
+// =====================
 // 🥅 GOALIES
+// =====================
 if (section === "goalies") {
+
 const saveMatch = stats.match(/(\d+)\/(\d+)/);
 
 let saves = 0;
@@ -775,13 +788,12 @@ await appendSheetValues("Game Results!A2:F", [
 ]);
 
 // =========================
-// 📅 UPDATE SCHEDULE → FINAL
+// 📅 UPDATE SCHEDULE
 // =========================
 const schedule = await getSheetValues("Schedule!A2:I");
 
 for (let i = 0; i < schedule.length; i++) {
 const row = schedule[i];
-
 const rowGameId = String(row[1]).replace(/[^0-9]/g, "").trim();
 
 if (rowGameId === gameId) {
@@ -795,7 +807,7 @@ break;
 }
 
 // =========================
-// 📊 UPDATE STANDINGS
+// 📊 STANDINGS
 // =========================
 await rebuildStandings();
 
@@ -804,8 +816,11 @@ const STANDINGS_CHANNEL_ID = "1498060011589472396";
 const STAT_LEADERS_CHANNEL_ID = "1498060011589472396";
 
 // =========================
-// 🏒 GAME RECAP
+// 🏒 POST GAME RESULT
 // =========================
+try {
+const channel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
+
 let post = `🏒 **Game ${gameId} Final**\n\n`;
 post += `**${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**\n\n`;
 
@@ -821,51 +836,48 @@ post += `\n${team}\n`;
 goalieOutput[team].forEach(g => post += `${g}\n`);
 }
 
-// SAFE FETCH
-try {
-const channel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
 await channel.send(post);
 } catch (err) {
 console.error("GAME RESULTS CHANNEL ERROR:", err);
 }
 
 // =========================
-// 📊 STANDINGS
+// 📊 POST STANDINGS
 // =========================
 try {
-const standingsChannel = await interaction.client.channels.fetch(STANDINGS_CHANNEL_ID);
+const channel = await interaction.client.channels.fetch(STANDINGS_CHANNEL_ID);
 
 const standingsData = await getSheetValues("Standings!K2:S50");
 
-let standingsPost = "**📊 Updated Standings**\n\n";
+let post = "**📊 Updated Standings**\n\n";
 
 standingsData.slice(0, 10).forEach((row, i) => {
 const [team, gp, w, l, otl, pts] = row;
-standingsPost += `${i + 1}. ${team} - ${pts} pts (${w}-${l}-${otl})\n`;
+post += `${i + 1}. ${team} - ${pts} pts (${w}-${l}-${otl})\n`;
 });
 
-await standingsChannel.send(standingsPost);
+await channel.send(post);
 } catch (err) {
 console.error("STANDINGS CHANNEL ERROR:", err);
 }
 
 // =========================
-// 🏆 STAT LEADERS
+// 🏆 POST LEADERS
 // =========================
 try {
-const leadersChannel = await interaction.client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
+const channel = await interaction.client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
 
 const players = await getSheetValues("Player Stats!A2:H");
 
 players.sort((a, b) => Number(b[5]) - Number(a[5]));
 
-let leadersPost = "**🏆 Stat Leaders (Points)**\n\n";
+let post = "**🏆 Stat Leaders (Points)**\n\n";
 
 players.slice(0, 10).forEach((p, i) => {
-leadersPost += `${i + 1}. ${p[0]} - ${p[5]} pts\n`;
+post += `${i + 1}. ${p[0]} - ${p[5]} pts\n`;
 });
 
-await leadersChannel.send(leadersPost);
+await channel.send(post);
 } catch (err) {
 console.error("STAT LEADERS CHANNEL ERROR:", err);
 }
