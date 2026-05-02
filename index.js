@@ -737,7 +737,8 @@ for (const line of lines) {
 if (line.toLowerCase().startsWith("game:")) {
 gameId = line.split(":")[1].trim();
 }
-
+gameId = String(gameId).trim();
+  
 if (line.toLowerCase().startsWith("score:")) {
 const clean = line.replace(/score:/i, "").trim();
 const match = clean.match(/(.+?)\s+(\d+)\s*-\s*(.+?)\s+(\d+)/);
@@ -886,35 +887,9 @@ await appendSheetValues("Game Results!A2:F", [
 // =========================
 // 📊 UPDATE STANDINGS
 // =========================
-const standings = await getSheetValues("Standings!K1:S50");
 
-function updateTeam(teamName, gf, ga, isWin) {
-for (let i = 0; i < standings.length; i++) {
-const row = standings[i];
-
-if (normalize(row[0]) === normalize(teamName)) {
-const gp = num(row[1]) + 1;
-const w = num(row[2]) + (isWin ? 1 : 0);
-const l = num(row[3]) + (isWin ? 0 : 1);
-const otl = num(row[4]);
-const pts = num(row[5]) + (isWin ? 2 : 0);
-const newGF = num(row[6]) + gf;
-const newGA = num(row[7]) + ga;
-
-standings[i] = [
-teamName, gp, w, l, otl, pts,
-newGF, newGA, newGF - newGA
-];
-}
-}
-}
-
-updateTeam(homeTeam, homeScore, awayScore, homeScore > awayScore);
-updateTeam(awayTeam, awayScore, homeScore, awayScore > homeScore);
-
-standings.sort((a, b) => num(b[5]) - num(a[5]));
-await updateSheetValues("Standings!K1:S50", standings);
-
+await rebuildStandings();
+  
 // =========================
 // 🏒 POST GAME RECAP
 // =========================
@@ -1264,3 +1239,45 @@ function formatGAA(value) {
 }
 
 client.login(process.env.DISCORD_TOKEN);
+
+async function rebuildStandings() {
+const results = await getSheetValues("Game Results!A2:F");
+let standings = await getSheetValues("Standings!K2:S50");
+
+standings = standings.map(row => [
+row[0], 0,0,0,0,0,0,0,0
+]);
+
+function updateTeam(teamName, gf, ga, isWin) {
+for (let i = 0; i < standings.length; i++) {
+if (normalize(standings[i][0]) === normalize(teamName)) {
+standings[i][1] += 1;
+if (isWin) {
+standings[i][2] += 1;
+standings[i][5] += 2;
+} else {
+standings[i][3] += 1;
+}
+
+standings[i][6] += gf;
+standings[i][7] += ga;
+standings[i][8] = standings[i][6] - standings[i][7];
+}
+}
+}
+
+for (const row of results) {
+const [id, home, away, homeScore, awayScore] = row;
+
+const h = Number(homeScore);
+const a = Number(awayScore);
+
+updateTeam(home, h, a, h > a);
+updateTeam(away, a, h, a > h);
+}
+
+standings.sort((a, b) => b[5] - a[5]);
+
+await updateSheetValues("Standings!K2:S50", standings);
+}
+
