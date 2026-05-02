@@ -139,7 +139,7 @@ ephemeral: true,
 });
 }
 
-return await handleRemoveGame(interaction);
+return handleRemoveGame(interaction);
 }
 
 async function handleLinkPlayer(interaction) {
