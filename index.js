@@ -993,16 +993,22 @@ const row = schedule[i];
 const rowGameId = String(row[1]).replace(/[^0-9]/g, "").trim();
 
 if (rowGameId === gameId) {
-// Clear score
 row[5] = ""; // Home Score
 row[6] = ""; // Away Score
-
-// Mark as NOT FINAL
-row[7] = "UPCOMING"; // <-- THIS is the key change
+row[7] = "UPCOMING"; // Final → reset
 row[8] = ""; // OT
+
+await updateSheetValues(
+`Schedule!A${i + 2}:I${i + 2}`,
+[row]
+);
+
+break;
 }
 }
 
+  
+  
 await updateSheetValues("Schedule!A2:I", schedule);
 
 for (let i = 0; i < schedule.length; i++) {
