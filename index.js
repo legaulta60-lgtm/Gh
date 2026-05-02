@@ -1,7 +1,3 @@
-const GAME_RESULTS_CHANNEL_ID=1498059946116382731;
-const STANDINGS_CHANNEL_ID=1498060011589472396;
-const STAT_LEADERS_CHANNEL_ID=1498060011589472396;
-
 const {
   Client,
   GatewayIntentBits,
@@ -806,9 +802,10 @@ await rebuildStandings();
 // =========================
 // 🏒 POST GAME RECAP
 // =========================
-const GAME_RESULTS_CHANNEL_ID = process.env.GAME_RESULTS_CHANNEL_ID;
-const STANDINGS_CHANNEL_ID = process.env.STANDINGS_CHANNEL_ID;
-const STAT_LEADERS_CHANNEL_ID = process.env.STAT_LEADERS_CHANNEL_ID;  
+const GAME_RESULTS_CHANNEL_ID=1498059946116382731;
+const STANDINGS_CHANNEL_ID=1498060011589472396;
+const STAT_LEADERS_CHANNEL_ID=1498060011589472396;
+
 
 let post = `🏒 **Game ${gameId} Final**\n\n`;
 post += `**${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**\n\n`;
