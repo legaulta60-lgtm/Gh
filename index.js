@@ -997,25 +997,22 @@ async function handleRemoveGame(interaction) {
 // 🔒 ADMIN CHECK
 if (!interaction.member.permissions.has("Administrator")) {
 return interaction.reply({
-content: "❌ You do not have permission to use this command.",
+content: "❌ You do not have permission.",
 ephemeral: true
 });
 }
 
 await interaction.deferReply();
 
-const gameId = interaction.options.getString("game");
+const gameId = String(interaction.options.getString("game")).trim();
 
 // =========================
 // 🗑 REMOVE GAME RESULTS
 // =========================
 const results = await getSheetValues("Game Results!A2:F");
-const filteredResults = results.filter(row => String(row[0]) !== String(gameId));
-
-await sheets.spreadsheets.values.clear({
-spreadsheetId: process.env.SHEET_ID,
-range: "Game Results!A2:F",
-});
+const filteredResults = results.filter(row =>
+String(row[0]).trim() !== gameId
+);
 
 await updateSheetValues("Game Results!A2:F", filteredResults);
 
@@ -1023,17 +1020,14 @@ await updateSheetValues("Game Results!A2:F", filteredResults);
 // 🗑 REMOVE MASTER STATS
 // =========================
 const master = await getSheetValues("Master Stats!A2:M");
-const filteredMaster = master.filter(row => String(row[0]) !== String(gameId));
-
-await sheets.spreadsheets.values.clear({
-spreadsheetId: process.env.SHEET_ID,
-range: "Master Stats!A2:M",
-});
+const filteredMaster = master.filter(row =>
+String(row[0]).trim() !== gameId
+);
 
 await updateSheetValues("Master Stats!A2:M", filteredMaster);
 
 // =========================
-// 📅 RESET SCHEDULE ROW
+// 📅 RESET SCHEDULE (ONLY 1 ROW)
 // =========================
 const schedule = await getSheetValues("Schedule!A2:I");
 
@@ -1042,11 +1036,11 @@ const row = schedule[i];
 
 const rowGameId = String(row[1]).replace(/[^0-9]/g, "").trim();
 
-if (rowGameId === String(gameId)) {
-row[5] = ""; // Home Score
-row[6] = ""; // Away Score
-row[7] = "UPCOMING"; // reset status
-row[8] = ""; // OT
+if (rowGameId === gameId) {
+row[5] = "";
+row[6] = "";
+row[7] = "UPCOMING";
+row[8] = "";
 
 await updateSheetValues(`Schedule!A${i + 2}:I${i + 2}`, [row]);
 break;
@@ -1054,27 +1048,25 @@ break;
 }
 
 // =========================
-// 📊 RESET + REBUILD STANDINGS
+// 📊 REBUILD STANDINGS (NO CLEAR NEEDED)
 // =========================
 let standings = await getSheetValues("Standings!K2:S50");
 
-// reset stats
 standings = standings.map(row => [
-row[0], // team
-0,0,0,0,0,0,0,0
+row[0], 0,0,0,0,0,0,0,0
 ]);
 
 function updateTeam(teamName, gf, ga, isWin) {
 for (let i = 0; i < standings.length; i++) {
 if (normalize(standings[i][0]) === normalize(teamName)) {
 
-standings[i][1] += 1; // GP
+standings[i][1] += 1;
 
 if (isWin) {
-standings[i][2] += 1; // W
-standings[i][5] += 2; // PTS
+standings[i][2] += 1;
+standings[i][5] += 2;
 } else {
-standings[i][3] += 1; // L
+standings[i][3] += 1;
 }
 
 standings[i][6] += gf;
@@ -1084,7 +1076,6 @@ standings[i][8] = standings[i][6] - standings[i][7];
 }
 }
 
-// rebuild from filtered results (IMPORTANT)
 for (const row of filteredResults) {
 const [id, home, away, homeScore, awayScore] = row;
 
@@ -1099,15 +1090,11 @@ updateTeam(away, a, h, a > h);
 
 standings.sort((a, b) => b[5] - a[5]);
 
-await sheets.spreadsheets.values.clear({
-spreadsheetId: process.env.SHEET_ID,
-range: "Standings!K2:S50",
-});
-
 await updateSheetValues("Standings!K2:S50", standings);
 
 return interaction.editReply(`🗑️ Game ${gameId} fully removed.`);
 }
+
 
 async function handleNotifyUnlinked(interaction) {
   await interaction.reply("⏳ Checking unlinked players...");
