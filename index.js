@@ -1287,3 +1287,31 @@ function formatGAA(value) {
 }
 
 client.login(process.env.DISCORD_TOKEN);
+
+
+
+console.log("START remove");
+
+const results = await getSheetValues("Game Results!A2:F");
+console.log("Got results");
+
+const filteredResults = results.filter(row =>
+String(row[0]).trim() !== gameId
+);
+
+await updateSheetValues("Game Results!A2:F", filteredResults);
+console.log("Updated Game Results");
+
+const master = await getSheetValues("Master Stats!A2:M");
+console.log("Got master");
+
+const filteredMaster = master.filter(row =>
+String(row[0]).trim() !== gameId
+);
+
+await updateSheetValues("Master Stats!A2:M", filteredMaster);
+console.log("Updated Master Stats");
+
+const schedule = await getSheetValues("Schedule!A2:I");
+console.log("Got schedule");
+
