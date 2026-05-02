@@ -428,188 +428,166 @@ content: `**${teamNameClean} Team Stats**`,
 files: [file],
 });
 }
-async function handleStandings(interaction) {
-  await interaction.deferReply();
 
-  const rows = await getSheetValues("Standings!K1:S12");
+// =========================
+// 📊 POST STANDINGS IMAGE
+// =========================
+async function postStandings(client) {
+const rows = await getSheetValues("Standings!K1:S12");
 
-  if (!rows.length) {
-    return interaction.editReply("No standings data found.");
-  }
+if (!rows.length) return;
 
-  const replacements = {};
-  const imageReplacements = {};
+const replacements = {};
+const imageReplacements = {};
 
-  for (let i = 0; i < 12; i++) {
-    const row = rows[i] || [];
-    const teamName = row[0] || "";
+for (let i = 0; i < 12; i++) {
+const row = rows[i] || [];
+const teamName = row[0] || "";
 
-    replacements[`TEAM${i + 1}`] = teamName;
-    replacements[`GP${i + 1}`] = row[1] || "0";
-    replacements[`W${i + 1}`] = row[2] || "0";
-    replacements[`L${i + 1}`] = row[3] || "0";
-    replacements[`OT${i + 1}`] = row[4] || "0";
-    replacements[`PT${i + 1}`] = row[5] || "0";
-    replacements[`GF${i + 1}`] = row[6] || "0";
-    replacements[`GA${i + 1}`] = row[7] || "0";
-    replacements[`DF${i + 1}`] = row[8] || "0";
+replacements[`TEAM${i + 1}`] = teamName;
+replacements[`GP${i + 1}`] = row[1] || "0";
+replacements[`W${i + 1}`] = row[2] || "0";
+replacements[`L${i + 1}`] = row[3] || "0";
+replacements[`OT${i + 1}`] = row[4] || "0";
+replacements[`PT${i + 1}`] = row[5] || "0";
+replacements[`GF${i + 1}`] = row[6] || "0";
+replacements[`GA${i + 1}`] = row[7] || "0";
+replacements[`DF${i + 1}`] = row[8] || "0";
 
-    if (TEAM_LOGOS[teamName]) {
-      imageReplacements[`LOGO${i + 1}`] = TEAM_LOGOS[teamName];
-    }
-  }
-
-  const image = await createImageFromTemplate(
-    process.env.STANDINGS_TEMPLATE_ID,
-    replacements,
-    "standings.png",
-    imageReplacements,
-  );
-
-  const file = new AttachmentBuilder(image, { name: "standings.png" });
-
-  return interaction.editReply({
-    content: "**WHL Standings**",
-    files: [file],
-  });
+if (TEAM_LOGOS[teamName]) {
+imageReplacements[`LOGO${i + 1}`] = TEAM_LOGOS[teamName];
+}
 }
 
-async function handleStatLeaders(interaction) {
-  await interaction.reply("📊 Generating stat leaders...");
+const image = await createImageFromTemplate(
+process.env.STANDINGS_TEMPLATE_ID,
+replacements,
+"standings.png",
+imageReplacements
+);
 
-  const playerRows = await getSheetValues("Player Stats!A2:I1000");
-  const goalieRows = await getSheetValues("Goalie Stats!A2:K1000");
+const channel = await client.channels.fetch("1498060011589472396");
 
-  if (!playerRows.length && !goalieRows.length) {
-    return interaction.editReply("No stat data found.");
-  }
-
-  const players = playerRows.map((row) => ({
-    Player: row[0],
-    Team: row[1],
-    G: num(row[3]),
-    A: num(row[4]),
-    PTS: num(row[5]),
-    "Blocked Shots": num(row[6]),
-    Takeaways: num(row[7]),
-    Interceptions: num(row[8]),
-  }));
-
-  const goalies = goalieRows.map((row) => ({
-    Player: row[0],
-    Team: row[1],
-    "SV%": num(row[8]),
-    GAA: num(row[9]),
-    Shutouts: num(row[10]),
-  }));
-
-  function getLeaders(arr, stat, count = 5, lowest = false) {
-    return arr
-      .filter((p) => p.Player)
-      .sort((a, b) => (lowest ? a[stat] - b[stat] : b[stat] - a[stat]))
-      .slice(0, count);
-  }
-
-  function getLogo(team) {
-    if (!team) return null;
-
-    const cleanTeam = normalize(team);
-
-    for (const key in TEAM_LOGOS) {
-      if (normalize(key) === cleanTeam) {
-        return TEAM_LOGOS[key];
-      }
-    }
-
-    console.log("NO LOGO MATCH FOR:", team); // DEBUG
-    return null;
-  }
-
-  const replacements = {};
-  const imageReplacements = {};
-
-  function fill(prefix, list, stat, format = (v) => v) {
-    for (let i = 0; i < 5; i++) {
-      const p = list[i] || {};
-
-      // TEXT
-      replacements[`${prefix}N${i + 1}`] = p.Player || "";
-      replacements[`${prefix}P${i + 1}`] =
-        p[stat] !== undefined ? format(p[stat]) : "0";
-
-      // 🔥 LOGOS (THIS IS THE FIX)
-      if (p.Team) {
-        const logo = getLogo(p.Team);
-        if (logo) {
-          imageReplacements[`${prefix}LOGO${i + 1}`] = logo;
-        }
-      }
-    }
-  }
-
-  // SKATERS
-  fill("P", getLeaders(players, "PTS"), "PTS");
-  fill("G", getLeaders(players, "G"), "G");
-  fill("A", getLeaders(players, "A"), "A");
-
-  fill("B", getLeaders(players, "Blocked Shots"), "Blocked Shots");
-  fill("T", getLeaders(players, "Takeaways"), "Takeaways");
-  fill("I", getLeaders(players, "Interceptions"), "Interceptions");
-
-  // GOALIES
-  fill("SV", getLeaders(goalies, "SV%"), "SV%", (v) =>
-    v === 0 ? "0.000" : Number(v).toFixed(3).replace(/^0/, ""),
-  );
-
-  const gaaLeaders = getLeaders(goalies, "GAA", 5, true);
-  for (let i = 0; i < 5; i++) {
-    const p = gaaLeaders[i] || {};
-    replacements[`GNM${i + 1}`] = p.Player || "";
-    replacements[`GAA${i + 1}`] =
-      p.GAA !== undefined ? Number(p.GAA).toFixed(2) : "0.00";
-  }
-
-  for (let i = 0; i < 5; i++) {
-    const p = gaaLeaders[i] || {};
-
-    replacements[`GNM${i + 1}`] = p.Player || "";
-    replacements[`GAA${i + 1}`] =
-      p.GAA !== undefined ? Number(p.GAA).toFixed(2) : "0.00";
-
-    if (p.Team) {
-      const logo = getLogo(p.Team);
-      if (logo) {
-        imageReplacements[`GAALOGO${i + 1}`] = logo;
-      }
-    }
-  }
-
-  const gaaTop = gaaLeaders[0];
-  if (gaaTop) {
-    const logo = getLogo(gaaTop.Team);
-    if (logo) {
-      imageReplacements["GAALOGO1"] = logo;
-    }
-  }
-
-  fill("SO", getLeaders(goalies, "Shutouts"), "Shutouts");
-
-  const image = await createImageFromTemplate(
-    process.env.LEADERS_TEMPLATE_ID,
-    replacements,
-    "statleaders.png",
-    imageReplacements,
-  );
-
-  const file = new AttachmentBuilder(image, { name: "statleaders.png" });
-
-  return interaction.editReply({
-    content: "📊 **WHL Stat Leaders**",
-    files: [file],
-  });
-
+await channel.send({
+content: "**WHL Standings**",
+files: [new AttachmentBuilder(image, { name: "standings.png" })],
+});
 }
 
+
+// =========================
+// 🏆 POST STAT LEADERS IMAGE
+// =========================
+async function postStatLeaders(client) {
+const playerRows = await getSheetValues("Player Stats!A2:I1000");
+const goalieRows = await getSheetValues("Goalie Stats!A2:K1000");
+
+if (!playerRows.length && !goalieRows.length) return;
+
+const players = playerRows.map((row) => ({
+Player: row[0],
+Team: row[1],
+G: num(row[3]),
+A: num(row[4]),
+PTS: num(row[5]),
+"Blocked Shots": num(row[6]),
+Takeaways: num(row[7]),
+Interceptions: num(row[8]),
+}));
+
+const goalies = goalieRows.map((row) => ({
+Player: row[0],
+Team: row[1],
+"SV%": num(row[8]),
+GAA: num(row[9]),
+Shutouts: num(row[10]),
+}));
+
+function getLeaders(arr, stat, count = 5, lowest = false) {
+return arr
+.filter((p) => p.Player)
+.sort((a, b) => (lowest ? a[stat] - b[stat] : b[stat] - a[stat]))
+.slice(0, count);
+}
+
+function getLogo(team) {
+if (!team) return null;
+const cleanTeam = normalize(team);
+
+for (const key in TEAM_LOGOS) {
+if (normalize(key) === cleanTeam) {
+return TEAM_LOGOS[key];
+}
+}
+return null;
+}
+
+const replacements = {};
+const imageReplacements = {};
+
+function fill(prefix, list, stat, format = (v) => v) {
+for (let i = 0; i < 5; i++) {
+const p = list[i] || {};
+
+replacements[`${prefix}N${i + 1}`] = p.Player || "";
+replacements[`${prefix}P${i + 1}`] =
+p[stat] !== undefined ? format(p[stat]) : "0";
+
+if (p.Team) {
+const logo = getLogo(p.Team);
+if (logo) {
+imageReplacements[`${prefix}LOGO${i + 1}`] = logo;
+}
+}
+}
+}
+
+// SKATERS
+fill("P", getLeaders(players, "PTS"), "PTS");
+fill("G", getLeaders(players, "G"), "G");
+fill("A", getLeaders(players, "A"), "A");
+fill("B", getLeaders(players, "Blocked Shots"), "Blocked Shots");
+fill("T", getLeaders(players, "Takeaways"), "Takeaways");
+fill("I", getLeaders(players, "Interceptions"), "Interceptions");
+
+// GOALIES
+fill("SV", getLeaders(goalies, "SV%"), "SV%", (v) =>
+v === 0 ? "0.000" : Number(v).toFixed(3).replace(/^0/, "")
+);
+
+const gaaLeaders = getLeaders(goalies, "GAA", 5, true);
+
+for (let i = 0; i < 5; i++) {
+const p = gaaLeaders[i] || {};
+
+replacements[`GNM${i + 1}`] = p.Player || "";
+replacements[`GAA${i + 1}`] =
+p.GAA !== undefined ? Number(p.GAA).toFixed(2) : "0.00";
+
+if (p.Team) {
+const logo = getLogo(p.Team);
+if (logo) {
+imageReplacements[`GAALOGO${i + 1}`] = logo;
+}
+}
+}
+
+fill("SO", getLeaders(goalies, "Shutouts"), "Shutouts");
+
+const image = await createImageFromTemplate(
+process.env.LEADERS_TEMPLATE_ID,
+replacements,
+"statleaders.png",
+imageReplacements
+);
+
+const channel = await client.channels.fetch("1498060011589472396");
+
+await channel.send({
+content: "📊 **WHL Stat Leaders**",
+files: [new AttachmentBuilder(image, { name: "statleaders.png" })],
+});
+}
 
 async function handleGameResults(interaction) {
 await interaction.deferReply();
@@ -863,6 +841,10 @@ console.error("LEADERS ERROR:", err);
 }
 
 return interaction.editReply("✅ Game recorded & posted.");
+
+await postStandings(interaction.client);
+await postStatLeaders(interaction.client);
+  
 }
 
 
