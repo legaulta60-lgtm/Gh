@@ -96,7 +96,7 @@ const commands = [
       option
         .setName("game")
         .setDescription("Game ID")
-        .setRequired(true),
+        .setRequired(true)
     ),
   
   new SlashCommandBuilder()
