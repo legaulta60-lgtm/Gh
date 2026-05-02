@@ -92,7 +92,7 @@ const commands = [
   new SlashCommandBuilder()
     .setName("removegame")
     .setDescription("Remove a game by ID")
-    .addStringOption((option) =>
+    .addStringOption(option =>
       option
         .setName("game")
         .setDescription("Game ID")
