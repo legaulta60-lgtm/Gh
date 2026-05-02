@@ -718,6 +718,7 @@ async function handleStatLeaders(interaction) {
 
 }
 
+
 async function handleGameResults(interaction) {
 await interaction.deferReply();
 
@@ -737,8 +738,7 @@ for (const line of lines) {
 if (line.toLowerCase().startsWith("game:")) {
 gameId = line.split(":")[1].trim();
 }
-gameId = String(gameId).trim();
-  
+
 if (line.toLowerCase().startsWith("score:")) {
 const clean = line.replace(/score:/i, "").trim();
 const match = clean.match(/(.+?)\s+(\d+)\s*-\s*(.+?)\s+(\d+)/);
@@ -750,6 +750,12 @@ awayTeam = match[3].trim();
 awayScore = Number(match[4]);
 }
 }
+}
+
+gameId = String(gameId).trim();
+
+if (!gameId) {
+return interaction.editReply("❌ Missing Game ID.");
 }
 
 if (!homeTeam || !awayTeam) {
@@ -770,19 +776,17 @@ return linked.some(row => normalize(row[2]) === normalize(player));
 const masterRows = [];
 const unlinkedRows = [];
 
-// =========================
-// 📦 OUTPUT STORAGE
-// =========================
 const skaterOutput = {};
 const goalieOutput = {};
 
 // =========================
-// 🏒 PARSE EVERYTHING IN ONE PASS
+// 🏒 PARSE STATS
 // =========================
 let section = "";
 let currentTeam = "";
 
 for (const line of lines) {
+
 if (line === "SKATERS") {
 section = "skaters";
 continue;
@@ -793,7 +797,6 @@ section = "goalies";
 continue;
 }
 
-// TEAM LINE
 if (!line.includes(":")) {
 currentTeam = line;
 continue;
@@ -801,9 +804,7 @@ continue;
 
 const [name, stats] = line.split(":").map(s => s.trim());
 
-// =========================
 // 🏒 SKATERS
-// =========================
 if (section === "skaters") {
 let goals = 0;
 let assists = 0;
@@ -823,8 +824,8 @@ goals, assists, 0, 0, 0,
 if (!skaterOutput[currentTeam]) skaterOutput[currentTeam] = [];
 
 let lineText = `${name}:`;
-if (goals > 0) lineText += ` ${goals}G`;
-if (assists > 0) lineText += ` ${assists}A`;
+if (goals) lineText += ` ${goals}G`;
+if (assists) lineText += ` ${assists}A`;
 
 skaterOutput[currentTeam].push(lineText);
 
@@ -833,9 +834,7 @@ unlinkedRows.push([gameId, name, currentTeam]);
 }
 }
 
-// =========================
 // 🥅 GOALIES
-// =========================
 if (section === "goalies") {
 const saveMatch = stats.match(/(\d+)\/(\d+)/);
 
@@ -860,7 +859,6 @@ isLoss ? 1 : 0,
 ]);
 
 if (!goalieOutput[currentTeam]) goalieOutput[currentTeam] = [];
-
 goalieOutput[currentTeam].push(`${name}: ${stats}`);
 
 if (!isLinked(name)) {
@@ -881,63 +879,56 @@ await appendSheetValues("Unlinked Players!A:C", unlinkedRows);
 }
 
 await appendSheetValues("Game Results!A2:F", [
-[gameId, homeTeam, awayTeam, homeScore, awayScore, winner],
+[gameId, homeTeam, awayTeam, homeScore, awayScore, winner]
 ]);
+
+// =========================
+// 📅 UPDATE SCHEDULE → FINAL
+// =========================
+const schedule = await getSheetValues("Schedule!A2:I");
+
+for (let i = 0; i < schedule.length; i++) {
+const row = schedule[i];
+
+const rowGameId = String(row[1]).replace(/[^0-9]/g, "").trim();
+
+if (rowGameId === gameId) {
+row[5] = homeScore;
+row[6] = awayScore;
+row[7] = "FINAL";
+
+await updateSheetValues(`Schedule!A${i + 2}:I${i + 2}`, [row]);
+break;
+}
+}
 
 // =========================
 // 📊 UPDATE STANDINGS
 // =========================
-
 await rebuildStandings();
-  
+
 // =========================
 // 🏒 POST GAME RECAP
 // =========================
-
 const GAME_RESULTS_CHANNEL_ID = "PUT_CHANNEL_ID_HERE";
 
-// 🔥 OPTIONAL TEAM EMOJIS (UNLOCK LATER)
-// const TEAM_EMOJIS = {
-// "Toronto Maple Leafs": "<:leafs:ID>",
-// "Montreal Canadiens": "<:habs:ID>",
-// };
+let post = `🏒 **Game ${gameId} Final**\n\n`;
+post += `**${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**\n\n`;
 
-// const homeEmoji = TEAM_EMOJIS[homeTeam] || "";
-// const awayEmoji = TEAM_EMOJIS[awayTeam] || "";
-
-let post = `🏒 **Game ${gameId} Final**
-
-**${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**
-
-`;
-
-// SKATERS
 post += `**SKATERS**\n`;
 for (const team in skaterOutput) {
 post += `\n${team}\n`;
-skaterOutput[team].forEach(p => {
-post += `${p}\n`;
-});
+skaterOutput[team].forEach(p => post += `${p}\n`);
 }
 
-// GOALIES
 post += `\n**GOALIES**\n`;
 for (const team in goalieOutput) {
 post += `\n${team}\n`;
-goalieOutput[team].forEach(g => {
-post += `${g}\n`;
-});
+goalieOutput[team].forEach(g => post += `${g}\n`);
 }
 
 const channel = interaction.client.channels.cache.get(GAME_RESULTS_CHANNEL_ID);
-
-if (channel) {
-await channel.send(post);
-}
-
-// =========================
-// ✅ DONE
-// =========================
+if (channel) await channel.send(post);
 
 return interaction.editReply("✅ Game recorded & posted.");
 }
@@ -1010,24 +1001,40 @@ const gameId = String(interaction.options.getString("game")).trim();
 // 🗑 REMOVE GAME RESULTS
 // =========================
 const results = await getSheetValues("Game Results!A2:F");
+
 const filteredResults = results.filter(row =>
 String(row[0]).trim() !== gameId
 );
 
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Game Results!A2:F",
+});
+
+if (filteredResults.length) {
 await updateSheetValues("Game Results!A2:F", filteredResults);
+}
 
 // =========================
 // 🗑 REMOVE MASTER STATS
 // =========================
 const master = await getSheetValues("Master Stats!A2:M");
+
 const filteredMaster = master.filter(row =>
 String(row[0]).trim() !== gameId
 );
 
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Master Stats!A2:M",
+});
+
+if (filteredMaster.length) {
 await updateSheetValues("Master Stats!A2:M", filteredMaster);
+}
 
 // =========================
-// 📅 RESET SCHEDULE (ONLY 1 ROW)
+// 📅 RESET SCHEDULE (ONLY ONE ROW)
 // =========================
 const schedule = await getSheetValues("Schedule!A2:I");
 
@@ -1048,7 +1055,7 @@ break;
 }
 
 // =========================
-// 📊 REBUILD STANDINGS (NO CLEAR NEEDED)
+// 📊 REBUILD STANDINGS
 // =========================
 let standings = await getSheetValues("Standings!K2:S50");
 
@@ -1089,6 +1096,11 @@ updateTeam(away, a, h, a > h);
 }
 
 standings.sort((a, b) => b[5] - a[5]);
+
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Standings!K2:S50",
+});
 
 await updateSheetValues("Standings!K2:S50", standings);
 
