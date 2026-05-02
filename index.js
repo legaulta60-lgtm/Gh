@@ -131,75 +131,7 @@ client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-client.on("interactionCreate", async (interaction) => {
-  try {
-    if (interaction.isAutocomplete()) {
-      if (interaction.commandName === "teamstats") {
-        const focused = interaction.options.getFocused().toLowerCase();
-        const teams = await getTeams();
-
-        const choices = teams
-          .filter((team) => team.toLowerCase().includes(focused))
-          .slice(0, 25)
-          .map((team) => ({ name: team, value: team }));
-
-        return interaction.respond(choices);
-      }
-      return;
-    }
-
-    if (interaction.isStringSelectMenu()) {
-      if (interaction.customId === "schedule_team_select") {
-        return handleScheduleTeamSelect(
-          interaction,
-          sheets,
-          process.env.SHEET_ID,
-        );
-      }
-      return;
-    }
-
-    if (!interaction.isChatInputCommand()) return;
-
-    // PUBLIC COMMANDS
-    if (interaction.commandName === "linkplayer") {
-      return handleLinkPlayer(interaction);
-    }
-
-    if (interaction.commandName === "mystats") {
-      return handleMyStats(interaction);
-    }
-
-    if (interaction.commandName === "teamstats") {
-      return handleTeamStats(interaction);
-    }
-
-    if (interaction.commandName === "schedule") {
-      return handleSchedule(interaction, sheets, process.env.SHEET_ID);
-    }
-
-    // 🔒 ADMIN ONLY
-    if (interaction.commandName === "standings") {
-      if (!isAdmin(interaction)) {
-        return interaction.reply({
-          content: "❌ You don't have permission to use this command.",
-          ephemeral: true,
-        });
-      }
-      return handleStandings(interaction);
-    }
-
-    if (interaction.commandName === "statleaders") {
-      if (!isAdmin(interaction)) {
-        return interaction.reply({
-          content: "❌ You don't have permission to use this command.",
-          ephemeral: true,
-        });
-      }
-      return handleStatLeaders(interaction);
-    }
-
-     if (interaction.commandName === "gameresults") {
+if (interaction.commandName === "removegame") {
 if (!isAdmin(interaction)) {
 return interaction.reply({
 content: "❌ You don't have permission to use this command.",
@@ -207,38 +139,8 @@ ephemeral: true,
 });
 }
 
-return handleGameResults(interaction);
+return await handleRemoveGame(interaction);
 }
-
-    if (interaction.commandName === "removegame") {
-      return (interaction);
-    }
-
-    if (interaction.commandName === "notifyunlinked") {
-      if (!isAdmin(interaction)) {
-        return interaction.reply({
-          content: "❌ You don't have permission to use this command.",
-          ephemeral: true,
-        });
-      }
-      return handleNotifyUnlinked(interaction);
-    }
-  } catch (err) {
-    console.error("FULL ERROR:", err);
-
-    const errorMessage = err?.message || String(err);
-
-    if (interaction.deferred || interaction.replied) {
-      await interaction.editReply(
-        `Something went wrong:\n\`\`\`${errorMessage}\`\`\``,
-      );
-    } else {
-      await interaction.reply(
-        `Something went wrong:\n\`\`\`${errorMessage}\`\`\``,
-      );
-    }
-  }
-});
 
 async function handleLinkPlayer(interaction) {
   const userId = interaction.user.id;
