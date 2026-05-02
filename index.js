@@ -962,6 +962,11 @@ const gameId = interaction.options.getString("game");
 const results = await getSheetValues("Game Results!A2:F");
 const filteredResults = results.filter(row => row[0] != gameId);
 
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Game Results!A2:F",
+});
+
 await updateSheetValues("Game Results!A2:F", filteredResults);
 
 // =========================
@@ -970,7 +975,12 @@ await updateSheetValues("Game Results!A2:F", filteredResults);
 const master = await getSheetValues("Master Stats!A2:M");
 const filteredMaster = master.filter(row => row[0] != gameId);
 
-await updateSheetValues("Master Stats!A2:M", filteredMaster);
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Game Results!A2:F",
+});
+
+await updateSheetValues("Game Results!A2:F", filteredResults);
 
 // =========================
 // 📅 RESET SCHEDULE ROW
