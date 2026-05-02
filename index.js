@@ -199,7 +199,7 @@ client.on("interactionCreate", async (interaction) => {
       return handleStatLeaders(interaction);
     }
 
-     "gameresults") {
+     "gameresults" {
       if (!isAdmin(interaction)) {
         return interaction.reply({
           content: "❌ You don't have permission to use this command.",
