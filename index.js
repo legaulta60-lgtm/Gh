@@ -804,7 +804,9 @@ await rebuildStandings();
 // =========================
 // 🏒 POST GAME RECAP
 // =========================
-const GAME_RESULTS_CHANNEL_ID = "PUT_CHANNEL_ID_HERE";
+const GAME_RESULTS_CHANNEL_ID = process.env.GAME_RESULTS_CHANNEL_ID;
+const STANDINGS_CHANNEL_ID = process.env.STANDINGS_CHANNEL_ID;
+const STAT_LEADERS_CHANNEL_ID = process.env.STAT_LEADERS_CHANNEL_ID;  
 
 let post = `🏒 **Game ${gameId} Final**\n\n`;
 post += `**${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**\n\n`;
@@ -823,6 +825,33 @@ goalieOutput[team].forEach(g => post += `${g}\n`);
 
 const channel = interaction.client.channels.cache.get(GAME_RESULTS_CHANNEL_ID);
 if (channel) await channel.send(post);
+
+const standingsChannel = await interaction.client.channels.fetch(STANDINGS_CHANNEL_ID);
+
+const standingsData = await getSheetValues("Standings!K2:S50");
+
+let standingsPost = "**📊 Updated Standings**\n\n";
+
+standingsData.slice(0, 10).forEach((row, i) => {
+const [team, gp, w, l, otl, pts] = row;
+standingsPost += `${i + 1}. ${team} - ${pts} pts (${w}-${l}-${otl})\n`;
+});
+
+await standingsChannel.send(standingsPost);
+
+const leadersChannel = await interaction.client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
+
+const players = await getSheetValues("Player Stats!A2:H");
+
+players.sort((a, b) => Number(b[5]) - Number(a[5]));
+
+let leadersPost = "**🏆 Stat Leaders (Points)**\n\n";
+
+players.slice(0, 10).forEach((p, i) => {
+leadersPost += `${i + 1}. ${p[0]} - ${p[5]} pts\n`;
+});
+
+await leadersChannel.send(leadersPost);
 
 return interaction.editReply("✅ Game recorded & posted.");
 }
