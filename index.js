@@ -364,65 +364,163 @@ async function handleMyStats(interaction) {
 }
 
 async function handleTeamStats(interaction) {
-  await interaction.deferReply();
+await interaction.deferReply();
 
-  const teamName = interaction.options.getString("team").trim();
+const teamName = interaction.options.getString("team").trim();
 
+// =========================
+// 📊 GET TEAM FROM STANDINGS
+// =========================
+const standings = await getSheetValues("Standings!K1:S50");
 
-  const standings = await getSheetValues("Standings!K1:S50");
-  const team = standings.find(
-    (row) => normalize(row[0]) === normalize(teamName),
-  );
+const team = standings.find(
+(row) => normalize(row[0]) === normalize(teamName)
+);
 
-  if (!team) {
-    return interaction.editReply("Team not found.");
-  }
-
-  const playerRows = await getSheetValues("Player Stats!A2:K1000");
-
-  const teamPlayers = playerRows
-    .filter((row) => normalize(row[1]) === normalize(team[0]))
-    .sort((a, b) => num(b[5]) - num(a[5]))
-    .slice(0, 3);
-
-  const replacements = {
-    TEAM: team[0] || "",
-    W: team[2] || "0",
-    L: team[3] || "0",
-    OTL: team[4] || "0",
-    PTS: team[5] || "0",
-    GF: team[6] || "0",
-    GA: team[7] || "0",
-    DF: team[8] || "0",
-    TOP1: teamPlayers[0]?.[0] || "",
-    TOP1PTS: teamPlayers[0]?.[5] || "0",
-    TOP2: teamPlayers[1]?.[0] || "",
-    TOP2PTS: teamPlayers[1]?.[5] || "0",
-    TOP3: teamPlayers[2]?.[0] || "",
-    TOP3PTS: teamPlayers[2]?.[5] || "0",
-  };
-
-  const imageReplacements = {};
-
-  if (TEAM_LOGOS[team[0]]) {
-    imageReplacements.TEAM_LOGO = TEAM_LOGOS[team[0]];
-  }
-
-  const image = await createImageFromTemplate(
-    process.env.TEAMSTATS_TEMPLATE_ID,
-    replacements,
-    "teamstats.png",
-    imageReplacements,
-  );
-
-  const file = new AttachmentBuilder(image, { name: "teamstats.png" });
-
-  return interaction.editReply({
-    content: `**${team[0]} Team Stats**`,
-    files: [file],
-  });
+if (!team) {
+return interaction.editReply("Team not found.");
 }
 
+const teamNameClean = team[0];
+
+const gp = num(team[1]);
+const w = num(team[2]);
+const l = num(team[3]);
+const otl = num(team[4]);
+const pts = num(team[5]);
+const gf = num(team[6]);
+const ga = num(team[7]);
+
+const diff = gf - ga;
+
+// =========================
+// 🎨 DIFF COLOR SYSTEM
+// =========================
+let DIFF_POS = "";
+let DIFF_NEG = "";
+
+if (diff >= 0) {
+DIFF_POS = `+${diff}`;
+} else {
+DIFF_NEG = `${diff}`;
+}
+
+// =========================
+// 📊 GET PLAYERS
+// =========================
+const playerRows = await getSheetValues("Player Stats!A2:K1000");
+
+const teamPlayers = playerRows.filter(
+(row) => normalize(row[1]) === normalize(teamNameClean)
+);
+
+// Top 2 forwards by points
+const topForwards = teamPlayers
+.sort((a, b) => num(b[5]) - num(a[5]))
+.slice(0, 2);
+
+// =========================
+// 🥅 GET GOALIES
+// =========================
+const goalieRows = await getSheetValues("Goalie Stats!A2:K1000");
+
+const teamGoalies = goalieRows.filter(
+(row) => normalize(row[1]) === normalize(teamNameClean)
+);
+
+const topGoalie = teamGoalies.sort((a, b) => num(b[2]) - num(a[2]))[0];
+
+// =========================
+// 🧮 FORMAT FUNCTIONS
+// =========================
+
+function formatForward(p) {
+if (!p) return "N/A";
+
+const name = p[0];
+const gp = num(p[2]);
+const g = num(p[3]);
+const a = num(p[4]);
+const pts = num(p[5]);
+
+const ppg = gp > 0 ? (pts / gp).toFixed(2) : "0.00";
+
+return `${name} — ${gp} GP | ${g}G ${a}A ${pts}P | ${ppg} PPG`;
+}
+
+function formatGoalie(g) {
+if (!g) return "N/A";
+
+const name = g[0];
+const gp = num(g[2]);
+const w = num(g[3]);
+const saves = num(g[6]); // Saves column
+const shots = num(g[7]); // Shots Against column
+const ga = shots - saves;
+const so = num(g[10]);
+
+const svPct =
+shots > 0
+? (saves / shots).toFixed(3).replace(/^0/, "")
+: ".000";
+
+const gaa = gp > 0 ? (ga / gp).toFixed(2) : "0.00";
+
+return `${name} — ${gp} GP | ${w}W | ${svPct} SV% | ${gaa} GAA | ${so} SO`;
+}
+
+// =========================
+// 🧾 REPLACEMENTS
+// =========================
+
+const replacements = {
+TEAM: teamNameClean,
+
+GP: gp,
+W: w,
+L: l,
+OTL: otl,
+PTS: pts,
+
+GF: gf,
+GA: ga,
+
+DIFF_POS,
+DIFF_NEG,
+
+FWD1: formatForward(topForwards[0]),
+FWD2: formatForward(topForwards[1]),
+GOALIE1: formatGoalie(topGoalie),
+};
+
+// =========================
+// 🖼️ LOGO
+// =========================
+
+const imageReplacements = {};
+
+if (TEAM_LOGOS[teamNameClean]) {
+imageReplacements.TEAM_LOGO = TEAM_LOGOS[teamNameClean];
+}
+
+// =========================
+// 🖼️ GENERATE IMAGE
+// =========================
+
+const image = await createImageFromTemplate(
+process.env.TEAMSTATS_TEMPLATE_ID,
+replacements,
+"teamstats.png",
+imageReplacements
+);
+
+const file = new AttachmentBuilder(image, { name: "teamstats.png" });
+
+return interaction.editReply({
+content: `**${teamNameClean} Team Stats**`,
+files: [file],
+});
+}
 async function handleStandings(interaction) {
   await interaction.deferReply();
 
