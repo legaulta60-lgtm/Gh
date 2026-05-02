@@ -211,7 +211,7 @@ return handleGameResults(interaction);
 }
 
     if (interaction.commandName === "removegame") {
-      return handleRemoveGame(interaction);
+      return (interaction);
     }
 
     if (interaction.commandName === "notifyunlinked") {
@@ -992,7 +992,6 @@ await updateSheetValues("Standings!K2:S50", standings);
 }
 
 
-
 async function handleRemoveGame(interaction) {
 
 // 🔒 ADMIN CHECK
@@ -1010,7 +1009,8 @@ const gameId = interaction.options.getString("game");
 // =========================
 // 🗑 REMOVE GAME RESULTS
 // =========================
-const filteredResults = results.filter(row => row[0] != gameId);
+const results = await getSheetValues("Game Results!A2:F");
+const filteredResults = results.filter(row => String(row[0]) !== String(gameId));
 
 await sheets.spreadsheets.values.clear({
 spreadsheetId: process.env.SHEET_ID,
@@ -1023,14 +1023,14 @@ await updateSheetValues("Game Results!A2:F", filteredResults);
 // 🗑 REMOVE MASTER STATS
 // =========================
 const master = await getSheetValues("Master Stats!A2:M");
-const filteredMaster = master.filter(row => row[0] != gameId);
+const filteredMaster = master.filter(row => String(row[0]) !== String(gameId));
 
 await sheets.spreadsheets.values.clear({
 spreadsheetId: process.env.SHEET_ID,
 range: "Master Stats!A2:M",
 });
 
-await updateSheetValues("Master Stats!A2:M", filteredResults);
+await updateSheetValues("Master Stats!A2:M", filteredMaster);
 
 // =========================
 // 📅 RESET SCHEDULE ROW
@@ -1042,98 +1042,69 @@ const row = schedule[i];
 
 const rowGameId = String(row[1]).replace(/[^0-9]/g, "").trim();
 
-if (rowGameId === gameId) {
+if (rowGameId === String(gameId)) {
 row[5] = ""; // Home Score
 row[6] = ""; // Away Score
-row[7] = "UPCOMING"; // Final → reset
+row[7] = "UPCOMING"; // reset status
 row[8] = ""; // OT
 
-await updateSheetValues(
-`Schedule!A${i + 2}:I${i + 2}`,
-[row]
-);
-
+await updateSheetValues(`Schedule!A${i + 2}:I${i + 2}`, [row]);
 break;
 }
 }
 
-  
-  
-await updateSheetValues("Schedule!A2:I", schedule);
-
-for (let i = 0; i < schedule.length; i++) {
-const row = schedule[i];
-
-if (String(row[1]) === String(gameId)) {
-row[5] = ""; // Home Score
-row[6] = ""; // Away Score
-row[7] = ""; // Final?
-row[8] = ""; // OT?
-}
-}
-
-await updateSheetValues("Schedule!A2:I", schedule);
-
 // =========================
-// 📊 RESET STANDINGS
+// 📊 RESET + REBUILD STANDINGS
 // =========================
-let standings = await getSheetValues("Standings!A2:I");
+let standings = await getSheetValues("Standings!K2:S50");
 
+// reset stats
 standings = standings.map(row => [
-row[0],
+row[0], // team
 0,0,0,0,0,0,0,0
 ]);
 
 function updateTeam(teamName, gf, ga, isWin) {
 for (let i = 0; i < standings.length; i++) {
-const row = standings[i];
+if (normalize(standings[i][0]) === normalize(teamName)) {
 
-if (normalize(row[0]) === normalize(teamName)) {
-const gp = Number(row[1]) + 1;
-const w = Number(row[2]) + (isWin ? 1 : 0);
-const l = Number(row[3]) + (isWin ? 0 : 1);
-const otl = Number(row[4]);
-const pts = Number(row[5]) + (isWin ? 2 : 0);
-const newGF = Number(row[6]) + gf;
-const newGA = Number(row[7]) + ga;
+standings[i][1] += 1; // GP
 
-standings[i] = [
-teamName,
-gp,
-w,
-l,
-otl,
-pts,
-newGF,
-newGA,
-newGF - newGA
-];
+if (isWin) {
+standings[i][2] += 1; // W
+standings[i][5] += 2; // PTS
+} else {
+standings[i][3] += 1; // L
+}
+
+standings[i][6] += gf;
+standings[i][7] += ga;
+standings[i][8] = standings[i][6] - standings[i][7];
 }
 }
 }
 
-// =========================
-// 🔄 REBUILD STANDINGS
-// =========================
-const results = await getSheetValues("Game Results!A2:F")
-for (const row of results) {
+// rebuild from filtered results (IMPORTANT)
+for (const row of filteredResults) {
 const [id, home, away, homeScore, awayScore] = row;
 
 const h = Number(homeScore);
 const a = Number(awayScore);
 
+if (!home || !away || isNaN(h) || isNaN(a)) continue;
+
 updateTeam(home, h, a, h > a);
 updateTeam(away, a, h, a > h);
 }
 
-standings.sort((a, b) => Number(b[5]) - Number(a[5]));
+standings.sort((a, b) => b[5] - a[5]);
 
 await sheets.spreadsheets.values.clear({
 spreadsheetId: process.env.SHEET_ID,
 range: "Standings!K2:S50",
 });
 
-await updateSheetValues("Standings!K2:S50", filteredResults);
+await updateSheetValues("Standings!K2:S50", standings);
 
 return interaction.editReply(`🗑️ Game ${gameId} fully removed.`);
 }
