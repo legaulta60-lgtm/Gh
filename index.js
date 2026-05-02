@@ -1025,19 +1025,20 @@ async function updateSheetValues(range, values) {
 }
 
 async function createImageFromTemplate(
-  templateId,
-  replacements,
-  fileName,
-  imageReplacements = {},
+templateId,
+replacements,
+fileName,
+imageReplacements = {}
 ) {
-  const pres = await slides.presentations.get({
-    presentationId: templateId,
-  });
+try {
+const pres = await slides.presentations.get({
+presentationId: templateId,
+});
 
-  const sourceSlideId = pres.data.slides[0].objectId;
-  const tempSlideId = `TEMP_${Date.now()}`;
+const sourceSlideId = pres.data.slides[0].objectId;
+const tempSlideId = `TEMP_${Date.now()}`;
 
-  const requests = [
+const requests = [
 {
 duplicateObject: {
 objectId: sourceSlideId,
@@ -1046,79 +1047,70 @@ objectIds: {
 },
 },
 },
-{
-updateSlidesPosition: {
-slideObjectIds: [tempSlideId],
-insertionIndex: 0,
-},
-},
 ];
 
-// ADD TEXT REPLACEMENTS
-Object.entries(replacements).forEach(([key, value]) => {
+// TEXT replacements
+for (const key in replacements) {
 requests.push({
 replaceAllText: {
 containsText: {
 text: `{{${key}}}`,
 matchCase: true,
 },
-replaceText: String(value ?? ""),
+replaceText: String(replacements[key]),
 pageObjectIds: [tempSlideId],
 },
 });
-});
+}
 
-// ADD IMAGE REPLACEMENTS
-Object.entries(imageReplacements).forEach(([key, imageUrl]) => {
+// IMAGE replacements
+for (const key in imageReplacements) {
 requests.push({
 replaceAllShapesWithImage: {
-containsText: {
-text: `{{${key}}}`,
-matchCase: true,
-},
-imageUrl,
+imageUrl: imageReplacements[key],
 replaceMethod: "CENTER_CROP",
 pageObjectIds: [tempSlideId],
 },
 });
+}
+
+await slides.presentations.batchUpdate({
+presentationId: templateId,
+requestBody: { requests },
 });
-  
 
-  try {
-    await slides.presentations.batchUpdate({
-      presentationId: templateId,
-      requestBody: { requests },
-    });
+await new Promise((r) => setTimeout(r, 800));
 
-    await new Promise((resolve) => setTimeout(resolve, 800));
+const thumb = await slides.presentations.pages.getThumbnail({
+presentationId: templateId,
+pageObjectId: tempSlideId,
+"thumbnailProperties.mimeType": "PNG",
+"thumbnailProperties.thumbnailSize": "LARGE",
+});
 
-    const thumb = await slides.presentations.pages.getThumbnail({
-      presentationId: templateId,
-      pageObjectId: tempSlideId,
-      "thumbnailProperties.mimeType": "PNG",
-      "thumbnailProperties.thumbnailSize": "LARGE",
-    });
+const imageRes = await fetch(thumb.data.contentUrl);
+const arrayBuffer = await imageRes.arrayBuffer();
 
-    const imageRes = await fetch(thumb.data.contentUrl);
-    const arrayBuffer = await imageRes.arrayBuffer();
+return Buffer.from(arrayBuffer);
 
-    return Buffer.from(arrayBuffer);
-  } finally {
-    await slides.presentations
-      .batchUpdate({
-        presentationId: templateId,
-        requestBody: {
-          requests: [
-            {
-              deleteObject: {
-                objectId: tempSlideId,
-              },
-            },
-          ],
-        },
-      })
-      .catch(() => {});
-  }
+} catch (err) {
+console.error("IMAGE ERROR:", err);
+throw err;
+
+} finally {
+await slides.presentations.batchUpdate({
+presentationId: templateId,
+requestBody: {
+requests: [
+{
+deleteObject: {
+objectId: `TEMP_${Date.now()}`,
+},
+},
+],
+},
+}).catch(() => {});
+}
 }
 
 function normalize(value) {
