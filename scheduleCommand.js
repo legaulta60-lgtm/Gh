@@ -147,11 +147,11 @@ const homeScore = result[3];
 const awayScore = result[4];
 
 games.push(
-`${home} ${homeScore}-${awayScore} ${away} FINAL`
+`${home}\n${away}\n${homeScore}-${awayScore} FINAL`
 );
 } else {
 games.push(
-`${home} vs ${away} UPCOMING`
+`${home}\n${away}\nUPCOMING`
 );
 }
 }
