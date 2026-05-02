@@ -942,6 +942,57 @@ await channel.send(post);
 return interaction.editReply("✅ Game recorded & posted.");
 }
 
+
+
+async function rebuildStandings() {
+const results = await getSheetValues("Game Results!A2:F");
+let standings = await getSheetValues("Standings!K2:S50");
+
+standings = standings.map(row => [
+row[0], 0,0,0,0,0,0,0,0
+]);
+
+function updateTeam(teamName, gf, ga, isWin) {
+for (let i = 0; i < standings.length; i++) {
+if (normalize(standings[i][0]) === normalize(teamName)) {
+standings[i][1] += 1;
+
+if (isWin) {
+standings[i][2] += 1;
+standings[i][5] += 2;
+} else {
+standings[i][3] += 1;
+}
+
+standings[i][6] += gf;
+standings[i][7] += ga;
+standings[i][8] = standings[i][6] - standings[i][7];
+}
+}
+}
+
+for (const row of results) {
+const [id, home, away, homeScore, awayScore] = row;
+
+const h = Number(homeScore);
+const a = Number(awayScore);
+
+updateTeam(home, h, a, h > a);
+updateTeam(away, a, h, a > h);
+}
+
+standings.sort((a, b) => b[5] - a[5]);
+
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Standings!K2:S50",
+});
+
+await updateSheetValues("Standings!K2:S50", standings);
+}
+
+
+
 async function handleRemoveGame(interaction) {
 
 // 🔒 ADMIN CHECK
@@ -1278,50 +1329,3 @@ function formatGAA(value) {
 }
 
 client.login(process.env.DISCORD_TOKEN);
-
-async function rebuildStandings() {
-const results = await getSheetValues("Game Results!A2:F");
-let standings = await getSheetValues("Standings!K2:S50");
-
-standings = standings.map(row => [
-row[0], 0,0,0,0,0,0,0,0
-]);
-
-function updateTeam(teamName, gf, ga, isWin) {
-for (let i = 0; i < standings.length; i++) {
-if (normalize(standings[i][0]) === normalize(teamName)) {
-standings[i][1] += 1;
-
-if (isWin) {
-standings[i][2] += 1;
-standings[i][5] += 2;
-} else {
-standings[i][3] += 1;
-}
-
-standings[i][6] += gf;
-standings[i][7] += ga;
-standings[i][8] = standings[i][6] - standings[i][7];
-}
-}
-}
-
-for (const row of results) {
-const [id, home, away, homeScore, awayScore] = row;
-
-const h = Number(homeScore);
-const a = Number(awayScore);
-
-updateTeam(home, h, a, h > a);
-updateTeam(away, a, h, a > h);
-}
-
-standings.sort((a, b) => b[5] - a[5]);
-
-await sheets.spreadsheets.values.clear({
-spreadsheetId: process.env.SHEET_ID,
-range: "Standings!K2:S50",
-});
-
-await updateSheetValues("Standings!K2:S50", standings);
-}
