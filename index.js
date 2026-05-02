@@ -712,7 +712,6 @@ const lines = input.split("\n").map(l => l.trim()).filter(Boolean);
 // =========================
 // 🧠 PARSE GAME + SCORE
 // =========================
-
 let gameId = "";
 let homeTeam = "";
 let awayTeam = "";
@@ -742,40 +741,43 @@ return interaction.editReply("❌ Invalid score format.");
 }
 
 const winner = homeScore > awayScore ? homeTeam : awayTeam;
-const loser = homeScore > awayScore ? awayTeam : homeTeam;
 
 // =========================
-// 🔗 LOAD LINKED PLAYERS ONCE
+// 🔗 LINKED PLAYERS
 // =========================
-
 const linked = await getSheetValues("Linked Players!A:C");
 
 function isLinked(player) {
 return linked.some(row => normalize(row[2]) === normalize(player));
 }
 
-const unlinkedRows = [];
 const masterRows = [];
+const unlinkedRows = [];
 
 // =========================
-// 🏒 PARSE SKATERS
+// 📦 OUTPUT STORAGE
 // =========================
+const skaterOutput = {};
+const goalieOutput = {};
 
-let currentSection = "";
+// =========================
+// 🏒 PARSE EVERYTHING IN ONE PASS
+// =========================
+let section = "";
 let currentTeam = "";
 
 for (const line of lines) {
 if (line === "SKATERS") {
-currentSection = "skaters";
+section = "skaters";
 continue;
 }
 
 if (line === "GOALIES") {
-currentSection = "goalies";
+section = "goalies";
 continue;
 }
 
-if (currentSection === "skaters") {
+// TEAM LINE
 if (!line.includes(":")) {
 currentTeam = line;
 continue;
@@ -783,6 +785,10 @@ continue;
 
 const [name, stats] = line.split(":").map(s => s.trim());
 
+// =========================
+// 🏒 SKATERS
+// =========================
+if (section === "skaters") {
 let goals = 0;
 let assists = 0;
 
@@ -792,51 +798,29 @@ const aMatch = stats.match(/(\d+)A/i);
 if (gMatch) goals = Number(gMatch[1]);
 if (aMatch) assists = Number(aMatch[1]);
 
-// ➜ MASTER STATS ROW (SKATER)
 masterRows.push([
-gameId || "",
-name,
-currentTeam,
-goals,
-assists,
-0, // BS
-0, // TA
-0, // INT
-"", "", "", "", "" // goalie fields blank
+gameId, name, currentTeam,
+goals, assists, 0, 0, 0,
+"", "", "", "", ""
 ]);
 
-// ➜ UNLINKED CHECK
+if (!skaterOutput[currentTeam]) skaterOutput[currentTeam] = [];
+
+let lineText = `${name}:`;
+if (goals > 0) lineText += ` ${goals}G`;
+if (assists > 0) lineText += ` ${assists}A`;
+
+skaterOutput[currentTeam].push(lineText);
+
 if (!isLinked(name)) {
-unlinkedRows.push([gameId || "", name, currentTeam]);
-}
+unlinkedRows.push([gameId, name, currentTeam]);
 }
 }
 
 // =========================
-// 🥅 PARSE GOALIES
+// 🥅 GOALIES
 // =========================
-
-let goalieTeam = "";
-let goalieW = "";
-let goalieL = "";
-let goalieStats = {};
-
-let section = "";
-
-for (const line of lines) {
-if (line === "GOALIES") {
-section = "goalies";
-continue;
-}
-
-if (section === "goalies" && !line.includes(":")) {
-goalieTeam = line;
-continue;
-}
-
-if (section === "goalies" && line.includes(":")) {
-const [name, stats] = line.split(":").map(s => s.trim());
-
+if (section === "goalies") {
 const saveMatch = stats.match(/(\d+)\/(\d+)/);
 
 let saves = 0;
@@ -851,52 +835,42 @@ const isWin = stats.includes("W");
 const isLoss = stats.includes("L");
 
 masterRows.push([
-gameId || "",
-name,
-goalieTeam,
+gameId, name, currentTeam,
 "", "", "", "", "",
-saves,
-shots,
+saves, shots,
 isWin ? 1 : 0,
 isLoss ? 1 : 0,
 0
 ]);
 
-// ➜ UNLINKED
+if (!goalieOutput[currentTeam]) goalieOutput[currentTeam] = [];
+
+goalieOutput[currentTeam].push(`${name}: ${stats}`);
+
 if (!isLinked(name)) {
-unlinkedRows.push([gameId || "", name, goalieTeam]);
+unlinkedRows.push([gameId, name, currentTeam]);
 }
 }
 }
 
 // =========================
-// 📝 WRITE MASTER STATS
+// 📝 WRITE DATA
 // =========================
-
-if (masterRows.length > 0) {
+if (masterRows.length) {
 await appendSheetValues("Master Stats!A:M", masterRows);
 }
 
-// =========================
-// ⚠️ WRITE UNLINKED
-// =========================
-
-if (unlinkedRows.length > 0) {
+if (unlinkedRows.length) {
 await appendSheetValues("Unlinked Players!A:C", unlinkedRows);
 }
 
-// =========================
-// 📝 GAME RESULTS
-// =========================
-
 await appendSheetValues("Game Results!A2:F", [
-[gameId || "", homeTeam, awayTeam, homeScore, awayScore, winner],
+[gameId, homeTeam, awayTeam, homeScore, awayScore, winner],
 ]);
 
 // =========================
 // 📊 UPDATE STANDINGS
 // =========================
-
 const standings = await getSheetValues("Standings!K1:S50");
 
 function updateTeam(teamName, gf, ga, isWin) {
@@ -913,15 +887,8 @@ const newGF = num(row[6]) + gf;
 const newGA = num(row[7]) + ga;
 
 standings[i] = [
-teamName,
-gp,
-w,
-l,
-otl,
-pts,
-newGF,
-newGA,
-newGF - newGA
+teamName, gp, w, l, otl, pts,
+newGF, newGA, newGF - newGA
 ];
 }
 }
@@ -931,16 +898,58 @@ updateTeam(homeTeam, homeScore, awayScore, homeScore > awayScore);
 updateTeam(awayTeam, awayScore, homeScore, awayScore > homeScore);
 
 standings.sort((a, b) => num(b[5]) - num(a[5]));
-
 await updateSheetValues("Standings!K1:S50", standings);
+
+// =========================
+// 🏒 POST GAME RECAP
+// =========================
+
+const GAME_RESULTS_CHANNEL_ID = "PUT_CHANNEL_ID_HERE";
+
+// 🔥 OPTIONAL TEAM EMOJIS (UNLOCK LATER)
+// const TEAM_EMOJIS = {
+// "Toronto Maple Leafs": "<:leafs:ID>",
+// "Montreal Canadiens": "<:habs:ID>",
+// };
+
+// const homeEmoji = TEAM_EMOJIS[homeTeam] || "";
+// const awayEmoji = TEAM_EMOJIS[awayTeam] || "";
+
+let post = `🏒 **Game ${gameId} Final**
+
+**${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**
+
+`;
+
+// SKATERS
+post += `**SKATERS**\n`;
+for (const team in skaterOutput) {
+post += `\n${team}\n`;
+skaterOutput[team].forEach(p => {
+post += `${p}\n`;
+});
+}
+
+// GOALIES
+post += `\n**GOALIES**\n`;
+for (const team in goalieOutput) {
+post += `\n${team}\n`;
+goalieOutput[team].forEach(g => {
+post += `${g}\n`;
+});
+}
+
+const channel = interaction.client.channels.cache.get(GAME_RESULTS_CHANNEL_ID);
+
+if (channel) {
+await channel.send(post);
+}
 
 // =========================
 // ✅ DONE
 // =========================
 
-return interaction.editReply(
-`✅ Game recorded: **${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**`
-);
+return interaction.editReply("✅ Game recorded & posted.");
 }
 
 
