@@ -1200,4 +1200,42 @@ function formatGAA(value) {
   return n.toFixed(2);
 }
 
+
+
+client.on("interactionCreate", async (interaction) => {
+try {
+if (!interaction.isChatInputCommand()) return;
+
+if (interaction.commandName === "gameresults") {
+if (!isAdmin(interaction)) {
+return interaction.reply({
+content: "❌ No permission.",
+ephemeral: true,
+});
+}
+return handleGameResults(interaction);
+}
+
+if (interaction.commandName === "removegame") {
+if (!isAdmin(interaction)) {
+return interaction.reply({
+content: "❌ No permission.",
+ephemeral: true,
+});
+}
+return handleRemoveGame(interaction);
+}
+
+} catch (err) {
+console.error(err);
+
+if (interaction.deferred || interaction.replied) {
+await interaction.editReply("❌ Error occurred.");
+} else {
+await interaction.reply("❌ Error occurred.");
+}
+}
+});
+
+
 client.login(process.env.DISCORD_TOKEN);
