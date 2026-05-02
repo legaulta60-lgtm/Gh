@@ -1200,21 +1200,4 @@ await interaction.reply("❌ Error occurred.");
 }
 });
 
-async function postStandings(client) {
-const channel = await client.channels.fetch("1498060011589472396");
-
-const image = await generateStandingsImage(); // ← THIS is your existing slide/image function
-
-await channel.send({ files: [image] });
-}
-
-async function postStatLeaders(client) {
-const channel = await client.channels.fetch("1498060011589472396");
-
-const image = await generateLeadersImage(); // ← your existing function
-
-await channel.send({ files: [image] });
-}
-
-
 client.login(process.env.DISCORD_TOKEN);
