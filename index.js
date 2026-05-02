@@ -433,13 +433,6 @@ files: [file],
 });
 }
 
-
-
-// =========================
-// 📊 POST STANDINGS + LEADERS
-// =========================
-async function postStandingsAndLeaders(client) {
-
 // =========================
 // 📊 STANDINGS
 // =========================
