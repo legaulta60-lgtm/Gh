@@ -199,15 +199,16 @@ client.on("interactionCreate", async (interaction) => {
       return handleStatLeaders(interaction);
     }
 
-     "gameresults" {
-      if (!isAdmin(interaction)) {
-        return interaction.reply({
-          content: "❌ You don't have permission to use this command.",
-          ephemeral: true,
-        });
-      }
-      return handleGameResults(interaction);
-    }
+     if (interaction.commandName === "gameresults") {
+if (!isAdmin(interaction)) {
+return interaction.reply({
+content: "❌ You don't have permission to use this command.",
+ephemeral: true,
+});
+}
+
+return handleGameResults(interaction);
+}
 
     if (interaction.commandName === "removegame") {
       return handleRemoveGame(interaction);
