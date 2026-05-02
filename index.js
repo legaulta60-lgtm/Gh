@@ -871,7 +871,7 @@ console.error("STAT LEADERS CHANNEL ERROR:", err);
 }
 
 return interaction.editReply("✅ Game recorded & posted.");
-
+}
 
 
 async function rebuildStandings() {
