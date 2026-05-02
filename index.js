@@ -959,7 +959,6 @@ const gameId = interaction.options.getString("game");
 // =========================
 // 🗑 REMOVE GAME RESULTS
 // =========================
-const results = await getSheetValues("Game Results!A2:F");
 const filteredResults = results.filter(row => row[0] != gameId);
 
 await sheets.spreadsheets.values.clear({
