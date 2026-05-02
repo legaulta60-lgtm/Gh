@@ -90,6 +90,16 @@ const commands = [
     .setDescription("View league stat leaders"),
 
   new SlashCommandBuilder()
+    .setName("removegame")
+    .setDescription("Remove a game by ID")
+    .addStringOption((option) =>
+      option
+        .setName("game")
+        .setDescription("Game ID")
+        .setRequired(true),
+    ),
+  
+  new SlashCommandBuilder()
     .setName("gameresults")
     .setDescription("Submit game result")
     .addStringOption((option) =>
@@ -189,7 +199,7 @@ client.on("interactionCreate", async (interaction) => {
       return handleStatLeaders(interaction);
     }
 
-    if (interaction.commandName === "gameresults") {
+     "gameresults") {
       if (!isAdmin(interaction)) {
         return interaction.reply({
           content: "❌ You don't have permission to use this command.",
@@ -197,6 +207,10 @@ client.on("interactionCreate", async (interaction) => {
         });
       }
       return handleGameResults(interaction);
+    }
+
+    if (interaction.commandName === "removegame") {
+      return handleRemoveGame(interaction);
     }
 
     if (interaction.commandName === "notifyunlinked") {
@@ -952,7 +966,111 @@ await channel.send(post);
 return interaction.editReply("✅ Game recorded & posted.");
 }
 
+async function handleRemoveGame(interaction) {
 
+// 🔒 ADMIN CHECK
+if (!interaction.member.permissions.has("Administrator")) {
+return interaction.reply({
+content: "❌ You do not have permission to use this command.",
+ephemeral: true
+});
+}
+
+await interaction.deferReply();
+
+const gameId = interaction.options.getString("game");
+
+// =========================
+// 🗑 REMOVE GAME RESULTS
+// =========================
+const results = await getSheetValues("Game Results!A2:F");
+const filteredResults = results.filter(row => row[0] != gameId);
+
+await updateSheetValues("Game Results!A2:F", filteredResults);
+
+// =========================
+// 🗑 REMOVE MASTER STATS
+// =========================
+const master = await getSheetValues("Master Stats!A2:M");
+const filteredMaster = master.filter(row => row[0] != gameId);
+
+await updateSheetValues("Master Stats!A2:M", filteredMaster);
+
+// =========================
+// 📅 RESET SCHEDULE ROW
+// =========================
+const schedule = await getSheetValues("Schedule!A2:I");
+
+for (let i = 0; i < schedule.length; i++) {
+const row = schedule[i];
+
+if (String(row[1]) === String(gameId)) {
+row[5] = ""; // Home Score
+row[6] = ""; // Away Score
+row[7] = ""; // Final?
+row[8] = ""; // OT?
+}
+}
+
+await updateSheetValues("Schedule!A2:I", schedule);
+
+// =========================
+// 📊 RESET STANDINGS
+// =========================
+let standings = await getSheetValues("Standings!A2:I");
+
+standings = standings.map(row => [
+row[0],
+0,0,0,0,0,0,0,0
+]);
+
+function updateTeam(teamName, gf, ga, isWin) {
+for (let i = 0; i < standings.length; i++) {
+const row = standings[i];
+
+if (normalize(row[0]) === normalize(teamName)) {
+const gp = Number(row[1]) + 1;
+const w = Number(row[2]) + (isWin ? 1 : 0);
+const l = Number(row[3]) + (isWin ? 0 : 1);
+const otl = Number(row[4]);
+const pts = Number(row[5]) + (isWin ? 2 : 0);
+const newGF = Number(row[6]) + gf;
+const newGA = Number(row[7]) + ga;
+
+standings[i] = [
+teamName,
+gp,
+w,
+l,
+otl,
+pts,
+newGF,
+newGA,
+newGF - newGA
+];
+}
+}
+}
+
+// =========================
+// 🔄 REBUILD STANDINGS
+// =========================
+for (const row of filteredResults) {
+const [id, home, away, homeScore, awayScore] = row;
+
+const h = Number(homeScore);
+const a = Number(awayScore);
+
+updateTeam(home, h, a, h > a);
+updateTeam(away, a, h, a > h);
+}
+
+standings.sort((a, b) => Number(b[5]) - Number(a[5]));
+
+await updateSheetValues("Standings!A2:I", standings);
+
+return interaction.editReply(`🗑️ Game ${gameId} fully removed.`);
+}
 
 async function handleNotifyUnlinked(interaction) {
   await interaction.reply("⏳ Checking unlinked players...");
