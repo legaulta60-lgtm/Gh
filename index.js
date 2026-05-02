@@ -816,7 +816,7 @@ const STANDINGS_CHANNEL_ID = "1498060011589472396";
 const STAT_LEADERS_CHANNEL_ID = "1498060011589472396";
 
 // =========================
-// 🏒 POST GAME RESULT
+// 🏒 POST GAME RESULT (TEXT)
 // =========================
 try {
 const channel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
@@ -837,49 +837,29 @@ goalieOutput[team].forEach(g => post += `${g}\n`);
 }
 
 await channel.send(post);
+
 } catch (err) {
-console.error("GAME RESULTS CHANNEL ERROR:", err);
+console.error("GAME RESULT ERROR:", err);
 }
 
+
 // =========================
-// 📊 POST STANDINGS
+// 📊 POST STANDINGS (IMAGE)
 // =========================
 try {
-const channel = await interaction.client.channels.fetch(STANDINGS_CHANNEL_ID);
-
-const standingsData = await getSheetValues("Standings!K2:S50");
-
-let post = "**📊 Updated Standings**\n\n";
-
-standingsData.slice(0, 10).forEach((row, i) => {
-const [team, gp, w, l, otl, pts] = row;
-post += `${i + 1}. ${team} - ${pts} pts (${w}-${l}-${otl})\n`;
-});
-
-await channel.send(post);
+await handleStandings(interaction);
 } catch (err) {
-console.error("STANDINGS CHANNEL ERROR:", err);
+console.error("STANDINGS ERROR:", err);
 }
 
+
 // =========================
-// 🏆 POST LEADERS
+// 🏆 POST LEADERS (IMAGE)
 // =========================
 try {
-const channel = await interaction.client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
-
-const players = await getSheetValues("Player Stats!A2:H");
-
-players.sort((a, b) => Number(b[5]) - Number(a[5]));
-
-let post = "**🏆 Stat Leaders (Points)**\n\n";
-
-players.slice(0, 10).forEach((p, i) => {
-post += `${i + 1}. ${p[0]} - ${p[5]} pts\n`;
-});
-
-await channel.send(post);
+await handleStatLeaders(interaction);
 } catch (err) {
-console.error("STAT LEADERS CHANNEL ERROR:", err);
+console.error("LEADERS ERROR:", err);
 }
 
 return interaction.editReply("✅ Game recorded & posted.");
