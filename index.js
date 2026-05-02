@@ -977,10 +977,10 @@ const filteredMaster = master.filter(row => row[0] != gameId);
 
 await sheets.spreadsheets.values.clear({
 spreadsheetId: process.env.SHEET_ID,
-range: "Game Results!A2:F",
+range: "Master Stats!A2:M",
 });
 
-await updateSheetValues("Game Results!A2:F", filteredResults);
+await updateSheetValues("Master Stats!A2:M", filteredResults);
 
 // =========================
 // 📅 RESET SCHEDULE ROW
