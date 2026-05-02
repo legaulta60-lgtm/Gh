@@ -799,14 +799,13 @@ break;
 // =========================
 await rebuildStandings();
 
-// =========================
-// 🏒 POST GAME RECAP
-// =========================
-const GAME_RESULTS_CHANNEL_ID=1498059946116382731;
-const STANDINGS_CHANNEL_ID=1498060011589472396;
-const STAT_LEADERS_CHANNEL_ID=1498060011589472396;
+const GAME_RESULTS_CHANNEL_ID = process.env.GAME_RESULTS_CHANNEL_ID;
+const STANDINGS_CHANNEL_ID = process.env.STANDINGS_CHANNEL_ID;
+const STAT_LEADERS_CHANNEL_ID = process.env.STAT_LEADERS_CHANNEL_ID;
 
-
+// =========================
+// 🏒 GAME RECAP
+// =========================
 let post = `🏒 **Game ${gameId} Final**\n\n`;
 post += `**${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**\n\n`;
 
@@ -822,9 +821,18 @@ post += `\n${team}\n`;
 goalieOutput[team].forEach(g => post += `${g}\n`);
 }
 
-const channel = interaction.client.channels.cache.get(GAME_RESULTS_CHANNEL_ID);
-if (channel) await channel.send(post);
+// SAFE FETCH
+try {
+const channel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
+await channel.send(post);
+} catch (err) {
+console.error("GAME RESULTS CHANNEL ERROR:", err);
+}
 
+// =========================
+// 📊 STANDINGS
+// =========================
+try {
 const standingsChannel = await interaction.client.channels.fetch(STANDINGS_CHANNEL_ID);
 
 const standingsData = await getSheetValues("Standings!K2:S50");
@@ -837,7 +845,14 @@ standingsPost += `${i + 1}. ${team} - ${pts} pts (${w}-${l}-${otl})\n`;
 });
 
 await standingsChannel.send(standingsPost);
+} catch (err) {
+console.error("STANDINGS CHANNEL ERROR:", err);
+}
 
+// =========================
+// 🏆 STAT LEADERS
+// =========================
+try {
 const leadersChannel = await interaction.client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
 
 const players = await getSheetValues("Player Stats!A2:H");
@@ -851,9 +866,11 @@ leadersPost += `${i + 1}. ${p[0]} - ${p[5]} pts\n`;
 });
 
 await leadersChannel.send(leadersPost);
+} catch (err) {
+console.error("STAT LEADERS CHANNEL ERROR:", err);
+}
 
 return interaction.editReply("✅ Game recorded & posted.");
-}
 
 
 
