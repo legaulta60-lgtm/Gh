@@ -990,6 +990,24 @@ const schedule = await getSheetValues("Schedule!A2:I");
 for (let i = 0; i < schedule.length; i++) {
 const row = schedule[i];
 
+const rowGameId = String(row[1]).replace(/[^0-9]/g, "").trim();
+
+if (rowGameId === gameId) {
+// Clear score
+row[5] = ""; // Home Score
+row[6] = ""; // Away Score
+
+// Mark as NOT FINAL
+row[7] = "UPCOMING"; // <-- THIS is the key change
+row[8] = ""; // OT
+}
+}
+
+await updateSheetValues("Schedule!A2:I", schedule);
+
+for (let i = 0; i < schedule.length; i++) {
+const row = schedule[i];
+
 if (String(row[1]) === String(gameId)) {
 row[5] = ""; // Home Score
 row[6] = ""; // Away Score
@@ -1053,7 +1071,12 @@ updateTeam(away, a, h, a > h);
 
 standings.sort((a, b) => Number(b[5]) - Number(a[5]));
 
-await updateSheetValues("Standings!A2:I", standings);
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Standings!K2:S50",
+});
+
+await updateSheetValues("Standings!K2:S50", filteredResults);
 
 return interaction.editReply(`🗑️ Game ${gameId} fully removed.`);
 }
@@ -1288,6 +1311,11 @@ updateTeam(away, a, h, a > h);
 
 standings.sort((a, b) => b[5] - a[5]);
 
-await updateSheetValues("Standings!K2:S50", standings);
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Standings!K2:S50",
+});
+
+await updateSheetValues("Standings!K2:S50", filteredResults);
 }
 
