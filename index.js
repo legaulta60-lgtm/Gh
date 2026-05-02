@@ -131,16 +131,6 @@ client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-if (interaction.commandName === "removegame") {
-if (!isAdmin(interaction)) {
-return interaction.reply({
-content: "❌ You don't have permission to use this command.",
-ephemeral: true,
-});
-}
-
-return handleRemoveGame(interaction);
-}
 
 async function handleLinkPlayer(interaction) {
   const userId = interaction.user.id;
@@ -1203,7 +1193,19 @@ function formatGAA(value) {
 
 
 client.on("interactionCreate", async (interaction) => {
-try {
+
+if (interaction.commandName === "removegame") {
+if (!isAdmin(interaction)) {
+return interaction.reply({
+content: "❌ You don't have permission to use this command.",
+ephemeral: true,
+});
+}
+
+return handleRemoveGame(interaction);
+}
+  
+  try {
 if (!interaction.isChatInputCommand()) return;
 
 if (interaction.commandName === "gameresults") {
