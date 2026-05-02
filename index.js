@@ -429,19 +429,24 @@ files: [file],
 });
 }
 
-// =========================
-// 📊 POST STANDINGS IMAGE
-// =========================
-async function postStandings(client) {
-const rows = await getSheetValues("Standings!K1:S12");
 
-if (!rows.length) return;
 
+// =========================
+// 📊 POST STANDINGS + LEADERS
+// =========================
+async function postStandingsAndLeaders(client) {
+
+// =========================
+// 📊 STANDINGS
+// =========================
+const standingsRows = await getSheetValues("Standings!K1:S12");
+
+if (standingsRows.length) {
 const replacements = {};
 const imageReplacements = {};
 
 for (let i = 0; i < 12; i++) {
-const row = rows[i] || [];
+const row = standingsRows[i] || [];
 const teamName = row[0] || "";
 
 replacements[`TEAM${i + 1}`] = teamName;
@@ -459,135 +464,65 @@ imageReplacements[`LOGO${i + 1}`] = TEAM_LOGOS[teamName];
 }
 }
 
-const image = await createImageFromTemplate(
+const standingsImage = await createImageFromTemplate(
 process.env.STANDINGS_TEMPLATE_ID,
 replacements,
 "standings.png",
 imageReplacements
 );
 
-const channel = await client.channels.fetch("1498060011589472396");
+const standingsChannel = await client.channels.fetch(STANDINGS_CHANNEL_ID);
 
-await channel.send({
-content: "**WHL Standings**",
-files: [new AttachmentBuilder(image, { name: "standings.png" })],
+await standingsChannel.send({
+files: [{ attachment: standingsImage, name: "standings.png" }]
 });
 }
 
 
 // =========================
-// 🏆 POST STAT LEADERS IMAGE
+// 🏆 STAT LEADERS
 // =========================
-async function postStatLeaders(client) {
 const playerRows = await getSheetValues("Player Stats!A2:I1000");
-const goalieRows = await getSheetValues("Goalie Stats!A2:K1000");
 
-if (!playerRows.length && !goalieRows.length) return;
-
+if (playerRows.length) {
 const players = playerRows.map((row) => ({
 Player: row[0],
 Team: row[1],
-G: num(row[3]),
-A: num(row[4]),
-PTS: num(row[5]),
-"Blocked Shots": num(row[6]),
-Takeaways: num(row[7]),
-Interceptions: num(row[8]),
+PTS: Number(row[5]) || 0
 }));
 
-const goalies = goalieRows.map((row) => ({
-Player: row[0],
-Team: row[1],
-"SV%": num(row[8]),
-GAA: num(row[9]),
-Shutouts: num(row[10]),
-}));
-
-function getLeaders(arr, stat, count = 5, lowest = false) {
-return arr
-.filter((p) => p.Player)
-.sort((a, b) => (lowest ? a[stat] - b[stat] : b[stat] - a[stat]))
-.slice(0, count);
-}
-
-function getLogo(team) {
-if (!team) return null;
-const cleanTeam = normalize(team);
-
-for (const key in TEAM_LOGOS) {
-if (normalize(key) === cleanTeam) {
-return TEAM_LOGOS[key];
-}
-}
-return null;
-}
+players.sort((a, b) => b.PTS - a.PTS);
 
 const replacements = {};
 const imageReplacements = {};
 
-function fill(prefix, list, stat, format = (v) => v) {
 for (let i = 0; i < 5; i++) {
-const p = list[i] || {};
+const p = players[i] || {};
 
-replacements[`${prefix}N${i + 1}`] = p.Player || "";
-replacements[`${prefix}P${i + 1}`] =
-p[stat] !== undefined ? format(p[stat]) : "0";
+replacements[`PN${i + 1}`] = p.Player || "";
+replacements[`PP${i + 1}`] = p.PTS || "0";
 
-if (p.Team) {
-const logo = getLogo(p.Team);
-if (logo) {
-imageReplacements[`${prefix}LOGO${i + 1}`] = logo;
-}
-}
+if (p.Team && TEAM_LOGOS[p.Team]) {
+imageReplacements[`PLOGO${i + 1}`] = TEAM_LOGOS[p.Team];
 }
 }
 
-// SKATERS
-fill("P", getLeaders(players, "PTS"), "PTS");
-fill("G", getLeaders(players, "G"), "G");
-fill("A", getLeaders(players, "A"), "A");
-fill("B", getLeaders(players, "Blocked Shots"), "Blocked Shots");
-fill("T", getLeaders(players, "Takeaways"), "Takeaways");
-fill("I", getLeaders(players, "Interceptions"), "Interceptions");
-
-// GOALIES
-fill("SV", getLeaders(goalies, "SV%"), "SV%", (v) =>
-v === 0 ? "0.000" : Number(v).toFixed(3).replace(/^0/, "")
-);
-
-const gaaLeaders = getLeaders(goalies, "GAA", 5, true);
-
-for (let i = 0; i < 5; i++) {
-const p = gaaLeaders[i] || {};
-
-replacements[`GNM${i + 1}`] = p.Player || "";
-replacements[`GAA${i + 1}`] =
-p.GAA !== undefined ? Number(p.GAA).toFixed(2) : "0.00";
-
-if (p.Team) {
-const logo = getLogo(p.Team);
-if (logo) {
-imageReplacements[`GAALOGO${i + 1}`] = logo;
-}
-}
-}
-
-fill("SO", getLeaders(goalies, "Shutouts"), "Shutouts");
-
-const image = await createImageFromTemplate(
+const leadersImage = await createImageFromTemplate(
 process.env.LEADERS_TEMPLATE_ID,
 replacements,
-"statleaders.png",
+"leaders.png",
 imageReplacements
 );
 
-const channel = await client.channels.fetch("1498060011589472396");
+const leadersChannel = await client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
 
-await channel.send({
-content: "📊 **WHL Stat Leaders**",
-files: [new AttachmentBuilder(image, { name: "statleaders.png" })],
+await leadersChannel.send({
+files: [{ attachment: leadersImage, name: "leaders.png" }]
 });
 }
+
+}
+
 
 async function handleGameResults(interaction) {
 await interaction.deferReply();
@@ -840,11 +775,12 @@ await postStatLeaders(interaction.client);
 console.error("LEADERS ERROR:", err);
 }
 
-return interaction.editReply("✅ Game recorded & posted.");
+const gameChannel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
+await gameChannel.send(post);
 
-await postStandings(interaction.client);
-await postStatLeaders(interaction.client);
-  
+await postStandingsAndLeaders(interaction.client);
+
+return interaction.editReply("✅ Game recorded & posted.");  
 }
 
 
