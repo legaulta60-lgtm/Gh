@@ -847,7 +847,7 @@ console.error("GAME RESULT ERROR:", err);
 // 📊 POST STANDINGS (IMAGE)
 // =========================
 try {
-await handleStandings(interaction);
+await postStandings(interaction.client);
 } catch (err) {
 console.error("STANDINGS ERROR:", err);
 }
@@ -857,7 +857,7 @@ console.error("STANDINGS ERROR:", err);
 // 🏆 POST LEADERS (IMAGE)
 // =========================
 try {
-await handleStatLeaders(interaction);
+await postStatLeaders(interaction.client);
 } catch (err) {
 console.error("LEADERS ERROR:", err);
 }
@@ -1277,6 +1277,22 @@ await interaction.reply("❌ Error occurred.");
 }
 }
 });
+
+async function postStandings(client) {
+const channel = await client.channels.fetch("1498060011589472396");
+
+const image = await generateStandingsImage(); // ← THIS is your existing slide/image function
+
+await channel.send({ files: [image] });
+}
+
+async function postStatLeaders(client) {
+const channel = await client.channels.fetch("1498060011589472396");
+
+const image = await generateLeadersImage(); // ← your existing function
+
+await channel.send({ files: [image] });
+}
 
 
 client.login(process.env.DISCORD_TOKEN);
