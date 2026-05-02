@@ -1065,7 +1065,8 @@ newGF - newGA
 // =========================
 // 🔄 REBUILD STANDINGS
 // =========================
-for (const row of filteredResults) {
+const results = await getSheetValues("Game Results!A2:F")
+for (const row of results) {
 const [id, home, away, homeScore, awayScore] = row;
 
 const h = Number(homeScore);
@@ -1291,6 +1292,7 @@ function updateTeam(teamName, gf, ga, isWin) {
 for (let i = 0; i < standings.length; i++) {
 if (normalize(standings[i][0]) === normalize(teamName)) {
 standings[i][1] += 1;
+
 if (isWin) {
 standings[i][2] += 1;
 standings[i][5] += 2;
@@ -1322,6 +1324,5 @@ spreadsheetId: process.env.SHEET_ID,
 range: "Standings!K2:S50",
 });
 
-await updateSheetValues("Standings!K2:S50", filteredResults);
+await updateSheetValues("Standings!K2:S50", standings);
 }
-
