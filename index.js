@@ -1036,13 +1036,20 @@ objectIds: {
 
 // TEXT replacements
 for (const key in replacements) {
+
+if (!key || key.includes("undefined")) continue;
+
+const value = replacements[key];
+
+if (value === undefined || value === null) continue;
+
 requests.push({
 replaceAllText: {
 containsText: {
 text: `{{${key}}}`,
 matchCase: true,
 },
-replaceText: String(replacements[key]),
+replaceText: String(value),
 pageObjectIds: [tempSlideId],
 },
 });
@@ -1050,9 +1057,13 @@ pageObjectIds: [tempSlideId],
 
 // IMAGE replacements
 for (const key in imageReplacements) {
+const url = imageReplacements[key];
+
+if (!url) continue;
+
 requests.push({
 replaceAllShapesWithImage: {
-imageUrl: imageReplacements[key],
+imageUrl: url,
 replaceMethod: "CENTER_CROP",
 pageObjectIds: [tempSlideId],
 },
