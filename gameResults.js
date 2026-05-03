@@ -58,31 +58,56 @@ files: [{ attachment: image, name: "standings.png" }]
 // 📊 POST STAT LEADERS
 // =========================
 async function postStatLeaders(client) {
-const rows = await getSheetValues("Player Stats!A2:I1000");
-if (!rows.length) return;
 
-const players = rows.map(r => ({
+// =========================
+// 📊 LOAD DATA
+// =========================
+const skaterRows = await getSheetValues("Player Stats!A2:I1000");
+const goalieRows = await getSheetValues("Goalie Stats!A2:K1000");
+
+// =========================
+// 🏒 FORMAT SKATERS
+// =========================
+const skaters = skaterRows
+.map(r => ({
 name: r[0],
-team: r[1],
+team: String(r[1] || "").trim(),
 goals: Number(r[3]) || 0,
 assists: Number(r[4]) || 0,
 pts: Number(r[5]) || 0,
 blocks: Number(r[6]) || 0,
 takeaways: Number(r[7]) || 0,
 interceptions: Number(r[8]) || 0
-}));
+}))
+.filter(p => p.name && p.name !== "");
+
+// =========================
+// 🥅 FORMAT GOALIES
+// =========================
+const goalies = goalieRows
+.map(r => ({
+name: r[0],
+team: String(r[1] || "").trim(),
+sv: Number(r[8]) || 0,
+gaa: Number(r[9]) || 0,
+so: Number(r[10]) || 0
+}))
+.filter(g => g.name && g.name !== "");
 
 const rep = {};
 const img = {};
 
-function fillTop(statKey, prefix) {
-const sorted = [...players].sort((a, b) => b[statKey] - a[statKey]);
+// =========================
+// 🧠 HELPER (SKATERS)
+// =========================
+function fillSkaters(statKey, prefix) {
+const sorted = [...skaters].sort((a, b) => b[statKey] - a[statKey]);
 
 for (let i = 0; i < 5; i++) {
 const p = sorted[i] || {};
 
 rep[`${prefix}N${i+1}`] = p.name || "";
-rep[`${prefix}P${i+1}`] = p[statKey] || "0";
+rep[`${prefix}P${i+1}`] = p[statKey] ?? "0";
 
 if (TEAM_LOGOS[p.team]) {
 img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
@@ -90,14 +115,46 @@ img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
 }
 }
 
-// 🔥 Fill each category
-fillTop("pts", "P"); // Points
-fillTop("goals", "G"); // Goals
-fillTop("assists", "A"); // Assists
-fillTop("blocks", "B"); // Blocks
-fillTop("takeaways", "T"); // Takeaways
-fillTop("interceptions", "I"); // Interceptions
+// =========================
+// 🧠 HELPER (GOALIES)
+// =========================
+function fillGoalies(statKey, prefix, lowerIsBetter = false) {
+const sorted = [...goalies].sort((a, b) =>
+lowerIsBetter ? a[statKey] - b[statKey] : b[statKey] - a[statKey]
+);
 
+for (let i = 0; i < 5; i++) {
+const g = sorted[i] || {};
+
+rep[`${prefix}N${i+1}`] = g.name || "";
+rep[`${prefix}${i+1}`] = g[statKey] ?? "0";
+
+if (TEAM_LOGOS[g.team]) {
+img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[g.team];
+}
+}
+}
+
+// =========================
+// 🔥 SKATER LEADERS
+// =========================
+fillSkaters("pts", "P"); // {{PN1}}, {{PP1}}
+fillSkaters("goals", "G"); // {{GN1}}, {{GP1}}
+fillSkaters("assists", "A"); // {{AN1}}, {{AP1}}
+fillSkaters("blocks", "B"); // {{BN1}}, {{BP1}}
+fillSkaters("takeaways", "T"); // {{TN1}}, {{TP1}}
+fillSkaters("interceptions", "I"); // {{IN1}}, {{IP1}}
+
+// =========================
+// 🥅 GOALIE LEADERS
+// =========================
+fillGoalies("sv", "SVN"); // {{SVN1}}, {{SV1}}
+fillGoalies("gaa", "GAA", true); // lower = better
+fillGoalies("so", "SON"); // {{SON1}}, {{SO1}}
+
+// =========================
+// 🖼️ GENERATE IMAGE
+// =========================
 const image = await createImageFromTemplate(
 process.env.LEADERS_TEMPLATE_ID,
 rep,
