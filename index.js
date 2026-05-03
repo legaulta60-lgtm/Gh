@@ -838,7 +838,6 @@ content: "❌ No permission.",
 ephemeral: true,
 });
 }
-return handleGameResults(interaction);
 }
 
 if (interaction.commandName === "removegame") {
