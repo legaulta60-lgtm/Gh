@@ -259,13 +259,6 @@ async function handleMyStats(interaction) {
     imageReplacements.TEAM_LOGO = TEAM_LOGOS[playerTeam];
   }
 
-  const image = await createImageFromTemplate(
-    process.env.MYSTATS_TEMPLATE_ID,
-    replacements,
-    "mystats.png",
-    imageReplacements,
-  );
-
   const file = new AttachmentBuilder(image, { name: "mystats.png" });
 
   return interaction.editReply({
