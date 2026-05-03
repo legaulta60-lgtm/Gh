@@ -54,60 +54,71 @@ files: [{ attachment: image, name: "standings.png" }]
 }
 
 
-// =========================
-// 📊 POST STAT LEADERS
-// =========================
 async function postStatLeaders(client) {
-
-// =========================
-// 📊 LOAD DATA
-// =========================
-const skaterRows = await getSheetValues("Player Stats!A3:I1000");
+const rows = await getSheetValues("Player Stats!A3:I1000");
 const goalieRows = await getSheetValues("Goalie Stats!A3:K1000");
 
-// =========================
-// 🏒 FORMAT SKATERS
-// =========================
-const skaters = skaterRows
-.map(r => ({
-name: r[0],
-team: String(r[1] || "").trim(),
-goals: Number(r[3]) || 0,
-assists: Number(r[4]) || 0,
-pts: Number(r[5]) || 0,
-blocks: Number(r[6]) || 0,
-takeaways: Number(r[7]) || 0,
-interceptions: Number(r[8]) || 0
-}))
-.filter(p => p.name && p.name !== "");
+if (!rows.length) return;
 
 // =========================
-// 🥅 FORMAT GOALIES
+// 🧠 MERGE DUPLICATE PLAYERS
+// =========================
+const playersMap = {};
+
+for (const r of rows) {
+const name = r[0];
+const team = r[1];
+
+if (!name) continue;
+
+if (!playersMap[name]) {
+playersMap[name] = {
+name,
+team,
+G: 0,
+A: 0,
+PTS: 0,
+BS: 0,
+TA: 0,
+INT: 0
+};
+}
+
+playersMap[name].G += Number(r[3]) || 0;
+playersMap[name].A += Number(r[4]) || 0;
+playersMap[name].PTS += Number(r[5]) || 0;
+playersMap[name].BS += Number(r[6]) || 0;
+playersMap[name].TA += Number(r[7]) || 0;
+playersMap[name].INT += Number(r[8]) || 0;
+}
+
+const players = Object.values(playersMap);
+
+// =========================
+// 🧠 GOALIES
 // =========================
 const goalies = goalieRows
+.filter(r => r[0])
 .map(r => ({
 name: r[0],
-team: String(r[1] || "").trim(),
-sv: Number(r[8]) || 0,
-gaa: Number(r[9]) || 0,
-so: Number(r[10]) || 0
-}))
-.filter(g => g.name && g.name !== "");
+team: r[1],
+SV: Number(r[9]) || 0,
+GAA: Number(r[10]) || 0,
+SO: Number(r[8]) || 0
+}));
+
+const top = (arr, key) =>
+[...arr].sort((a, b) => b[key] - a[key]).slice(0, 5);
 
 const rep = {};
 const img = {};
 
-// =========================
-// 🧠 HELPER (SKATERS)
-// =========================
-function fillSkaters(statKey, prefix) {
-const sorted = [...skaters].sort((a, b) => b[statKey] - a[statKey]);
-
+function fill(category, list, nameKey, valueKey, prefix) {
 for (let i = 0; i < 5; i++) {
-const p = sorted[i] || {};
+const p = list[i] || {};
 
 rep[`${prefix}N${i+1}`] = p.name || "";
-rep[`${prefix}P${i+1}`] = p[statKey] ?? "0";
+rep[`${prefix}P${i+1}`] = p[valueKey] ?? "0";
 
 if (TEAM_LOGOS[p.team]) {
 img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
@@ -116,41 +127,40 @@ img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
 }
 
 // =========================
-// 🧠 HELPER (GOALIES)
+// 🧊 SKATER CATEGORIES
 // =========================
-function fillGoalies(statKey, prefix, lowerIsBetter = false) {
-const sorted = [...goalies].sort((a, b) =>
-lowerIsBetter ? a[statKey] - b[statKey] : b[statKey] - a[statKey]
-);
+fill("PTS", top(players, "PTS"), "name", "PTS", "P");
+fill("GOALS", top(players, "G"), "name", "G", "G");
+fill("ASSISTS", top(players, "A"), "name", "A", "A");
+fill("BLOCKS", top(players, "BS"), "name", "BS", "B");
+fill("TAKEAWAYS", top(players, "TA"), "name", "TA", "T");
+fill("INTERCEPTIONS", top(players, "INT"), "name", "INT", "I");
+
+// =========================
+// 🧤 GOALIES
+// =========================
+const topSV = top(goalies, "SV");
+const topGAA = [...goalies].sort((a,b)=> a.GAA - b.GAA).slice(0,5);
+const topSO = top(goalies, "SO");
 
 for (let i = 0; i < 5; i++) {
-const g = sorted[i] || {};
+const sv = topSV[i] || {};
+const gaa = topGAA[i] || {};
+const so = topSO[i] || {};
 
-rep[`${prefix}N${i+1}`] = g.name || "";
-rep[`${prefix}${i+1}`] = g[statKey] ?? "0";
+rep[`SVN${i+1}`] = sv.name || "";
+rep[`SV${i+1}`] = sv.SV ?? "0";
 
-if (TEAM_LOGOS[g.team]) {
-img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[g.team];
+rep[`GNM${i+1}`] = gaa.name || "";
+rep[`GAA${i+1}`] = gaa.GAA ?? "0";
+
+rep[`SON${i+1}`] = so.name || "";
+rep[`SO${i+1}`] = so.SO ?? "0";
+
+if (TEAM_LOGOS[sv.team]) img[`SVLOGO${i+1}`] = TEAM_LOGOS[sv.team];
+if (TEAM_LOGOS[gaa.team]) img[`GLOGO${i+1}`] = TEAM_LOGOS[gaa.team];
+if (TEAM_LOGOS[so.team]) img[`SOLOGO${i+1}`] = TEAM_LOGOS[so.team];
 }
-}
-}
-
-// =========================
-// 🔥 SKATER LEADERS
-// =========================
-fillSkaters("pts", "P"); // {{PN1}}, {{PP1}}
-fillSkaters("goals", "G"); // {{GN1}}, {{GP1}}
-fillSkaters("assists", "A"); // {{AN1}}, {{AP1}}
-fillSkaters("blocks", "B"); // {{BN1}}, {{BP1}}
-fillSkaters("takeaways", "T"); // {{TN1}}, {{TP1}}
-fillSkaters("interceptions", "I"); // {{IN1}}, {{IP1}}
-
-// =========================
-// 🥅 GOALIE LEADERS
-// =========================
-fillGoalies("sv", "SVN"); // {{SVN1}}, {{SV1}}
-fillGoalies("gaa", "GAA", true); // lower = better
-fillGoalies("so", "SON"); // {{SON1}}, {{SO1}}
 
 // =========================
 // 🖼️ GENERATE IMAGE
@@ -163,12 +173,10 @@ img
 );
 
 const channel = await client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
-
 await channel.send({
 files: [{ attachment: image, name: "leaders.png" }]
 });
 }
-
 
 async function handleGameResults(interaction) {
 await interaction.deferReply();
