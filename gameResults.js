@@ -253,6 +253,15 @@ const ta = Number((rawStats.match(/(\d+)TA/) || [0, 0])[1]);
 const int = Number((rawStats.match(/(\d+)INT/) || [0, 0])[1]);
 const bs = Number((rawStats.match(/(\d+)BS/) || [0, 0])[1]);
 
+const linked = await getSheetValues("Linked Players!A:C");
+const isLinked = linked.some(row => normalize(row[2]) === normalize(name));
+
+if (!isLinked) {
+await appendSheetValues("Unlinked Players!A:C", [
+[gameId, name, currentTeam]
+]);
+}
+  
 masterRows.push([
 gameId, name, currentTeam,
 g, a, bs, ta, int,
@@ -272,6 +281,15 @@ const saves = Number(saveMatch[1]);
 const shots = Number(saveMatch[2]);
 const ga = shots - saves;
 
+const linked = await getSheetValues("Linked Players!A:C");
+const isLinked = linked.some(row => normalize(row[2]) === normalize(name));
+
+if (!isLinked) {
+await appendSheetValues("Unlinked Players!A:C", [
+[gameId, name, currentTeam]
+]);
+}  
+  
 const win = rawStats.includes("W") ? 1 : 0;
 const loss = rawStats.includes("L") ? 1 : 0;
 const so = ga === 0 ? 1 : 0;
