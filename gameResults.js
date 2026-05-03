@@ -278,6 +278,8 @@ g, a, pts, bs, ta, int
 // =========================
 if (mode === "GOALIES") {
 const saveMatch = rawStats.match(/(\d+)\/(\d+)/);
+
+// 🚫 prevents skaters from entering goalie stats
 if (!saveMatch) continue;
 
 const saves = Number(saveMatch[1]);
@@ -286,19 +288,20 @@ const ga = shots - saves;
 
 const win = rawStats.includes("W") ? 1 : 0;
 const loss = rawStats.includes("L") ? 1 : 0;
-const so = rawStats.includes("SO") ? 1 : 0;
 
-// MASTER STATS
-masterRows.push([
-gameId, name, currentTeam,
-"", "", "", "", "", "",
-saves, shots, win, loss, so
-]);
+// ✅ CORRECT shutout logic
+const so = ga === 0 ? 1 : 0;
 
-// GOALIE TOTALS
 goalieRows.push([
-name, currentTeam, 1,
-win, loss, ga, saves, shots, so
+name,
+currentTeam,
+1,
+win,
+loss,
+ga,
+saves,
+shots,
+so
 ]);
 }
 }
