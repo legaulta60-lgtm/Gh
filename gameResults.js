@@ -183,7 +183,7 @@ async function handleGameResults(interaction) {
 await interaction.deferReply();
 
 const input = interaction.options.getString("input");
-const linked = (await getSheetValues("Linked Players!A:C")) || [];
+const linked = (await getSheetValues("Linked Players!A2:C1000")) || [];
 const lines = input.split("\n").map(l => l.trim());
 
 let gameId = Date.now();
@@ -254,7 +254,9 @@ const ta = Number((rawStats.match(/(\d+)TA/) || [0, 0])[1]);
 const int = Number((rawStats.match(/(\d+)INT/) || [0, 0])[1]);
 const bs = Number((rawStats.match(/(\d+)BS/) || [0, 0])[1]);
 
-const isLinked = linked.some(row => normalize(row[2]) === normalize(name));
+const isLinked = Array.isArray(linked) && linked.some(row =>
+row[2] && normalize(row[2]) === normalize(name)
+);
 
 if (!isLinked) {
 await appendSheetValues("Unlinked Players!A:C", [
@@ -281,7 +283,9 @@ const saves = Number(saveMatch[1]);
 const shots = Number(saveMatch[2]);
 const ga = shots - saves;
 
-const isLinked = linked.some(row => normalize(row[2]) === normalize(name));
+const isLinked = Array.isArray(linked) && linked.some(row =>
+row[2] && normalize(row[2]) === normalize(name)
+);
 
 if (!isLinked) {
 await appendSheetValues("Unlinked Players!A:C", [
