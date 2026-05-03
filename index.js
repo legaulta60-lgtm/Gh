@@ -414,7 +414,8 @@ imageReplacements.TEAM_LOGO = TEAM_LOGOS[teamNameClean];
 // =========================
 
 console.log("REPLACEMENTS KEYS:", Object.keys(replacements));
-console.log("SAMPLE:", replacements["GP1"]);
+console.log("GP1 VALUE:", replacements["GP1"]);
+  console.log("FULL OBJECT:", replacements);
   
 const image = await createImageFromTemplate(
 process.env.TEAMSTATS_TEMPLATE_ID,
