@@ -875,7 +875,8 @@ createImageFromTemplate,
 TEAM_LOGOS,
 GAME_RESULTS_CHANNEL_ID,
 STANDINGS_CHANNEL_ID,
-STAT_LEADERS_CHANNEL_ID
+STAT_LEADERS_CHANNEL_ID,
+rebuildStandings
 });
 
 client.login(process.env.DISCORD_TOKEN);
