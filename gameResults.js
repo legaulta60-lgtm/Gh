@@ -227,40 +227,41 @@ return interaction.editReply("✅ Game recorded");
 // =========================
 // 🔁 REBUILD
 // =========================
-async function rebuildAllStats() {
+const isSkater = r[3] !== "" && r[3] !== null && r[3] !== undefined;
+const isGoalie = r[8] !== "" && r[8] !== null && r[8] !== undefined;
 
-const master = await getSheetValues("Master Stats!A3:M");
-
-const players={}, goalies={};
-
-for (const r of master) {
-
-const name=r[1], team=r[2];
-
-// skater
-if (r[3] !== null && r[3] !== "" && r[8] === null) {
-if (!players[name]) players[name]=[name,team,0,0,0,0,0,0,0];
-players[name][2]++;
-players[name][3]+=+r[3];
-players[name][4]+=+r[4];
-players[name][5]+=+r[3]+ +r[4];
-players[name][6]+=+r[5];
-players[name][7]+=+r[6];
-players[name][8]+=+r[7];
+// SKATER ONLY
+if (isSkater && !isGoalie) {
+if (!playerMap[name]) {
+playerMap[name] = [name, team, 0,0,0,0,0,0,0];
 }
 
-// goalie
-if (r[8] !== null && r[8] !== "") {
-if (!goalies[name]) goalies[name]=[name,team,0,0,0,0,0,0,0];
-const saves=+r[8], shots=+r[9];
-goalies[name][2]++;
-goalies[name][3]+=+r[10];
-goalies[name][4]+=+r[11];
-goalies[name][5]+=shots-saves;
-goalies[name][6]+=saves;
-goalies[name][7]+=shots;
-goalies[name][8]+=+r[12];
+playerMap[name][2] += 1;
+playerMap[name][3] += Number(r[3]) || 0;
+playerMap[name][4] += Number(r[4]) || 0;
+playerMap[name][5] += (Number(r[3]) + Number(r[4])) || 0;
+playerMap[name][6] += Number(r[5]) || 0;
+playerMap[name][7] += Number(r[6]) || 0;
+playerMap[name][8] += Number(r[7]) || 0;
 }
+
+// GOALIE ONLY
+if (isGoalie && !isSkater) {
+if (!goalieMap[name]) {
+goalieMap[name] = [name, team, 0,0,0,0,0,0,0];
+}
+
+const saves = Number(r[8]) || 0;
+const shots = Number(r[9]) || 0;
+const ga = shots - saves;
+
+goalieMap[name][2] += 1;
+goalieMap[name][3] += Number(r[10]) || 0;
+goalieMap[name][4] += Number(r[11]) || 0;
+goalieMap[name][5] += ga;
+goalieMap[name][6] += saves;
+goalieMap[name][7] += shots;
+goalieMap[name][8] += Number(r[12]) || 0;
 }
 
 await sheets.spreadsheets.values.clear({spreadsheetId:process.env.SHEET_ID,range:"Player Stats!A3:I"});
