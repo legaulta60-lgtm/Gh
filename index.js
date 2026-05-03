@@ -527,6 +527,74 @@ spreadsheetId: process.env.SHEET_ID,
 range: "Master Stats!A2:M",
 });
 
+// =========================
+// 🔄 REBUILD PLAYER + GOALIE STATS FROM MASTER
+// =========================
+
+const masterData = filteredMaster;
+
+// CLEAR tables
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Player Stats!A3:I",
+});
+
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Goalie Stats!A3:I",
+});
+
+const playerMap = {};
+const goalieMap = {};
+
+for (const row of masterData) {
+const name = row[1];
+const team = row[2];
+
+// 🧍 SKATER
+if (row[3] !== "") {
+if (!playerMap[name]) {
+playerMap[name] = [name, team, 0,0,0,0,0,0,0];
+}
+
+playerMap[name][2] += 1;
+playerMap[name][3] += Number(row[3]) || 0;
+playerMap[name][4] += Number(row[4]) || 0;
+playerMap[name][5] += Number(row[5]) || 0;
+playerMap[name][6] += Number(row[6]) || 0;
+playerMap[name][7] += Number(row[7]) || 0;
+playerMap[name][8] += Number(row[8]) || 0;
+}
+
+// 🧤 GOALIE
+if (row[9] !== "") {
+if (!goalieMap[name]) {
+goalieMap[name] = [name, team, 0,0,0,0,0,0,0];
+}
+
+const saves = Number(row[9]) || 0;
+const shots = Number(row[10]) || 0;
+const ga = shots - saves;
+
+goalieMap[name][2] += 1;
+goalieMap[name][3] += Number(row[11]) || 0;
+goalieMap[name][4] += Number(row[12]) || 0;
+goalieMap[name][5] += ga;
+goalieMap[name][6] += saves;
+goalieMap[name][7] += shots;
+goalieMap[name][8] += Number(row[13]) || 0;
+}
+}
+
+// WRITE BACK
+if (Object.keys(playerMap).length) {
+await updateSheetValues("Player Stats!A3:I", Object.values(playerMap));
+}
+
+if (Object.keys(goalieMap).length) {
+await updateSheetValues("Goalie Stats!A3:I", Object.values(goalieMap));
+}
+  
 if (filteredMaster.length) {
 await updateSheetValues("Master Stats!A2:M", filteredMaster);
 }
