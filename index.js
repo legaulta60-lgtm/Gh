@@ -1029,7 +1029,7 @@ objectId: tempSlideId,
 }).catch(() => {});
 }
 }
-}
+
 
 
 await slides.presentations.batchUpdate({
