@@ -245,7 +245,7 @@ continue;
 if (!line.includes(":")) continue;
 
 const [name, rawStats] = line.split(":").map(s => s.trim());
-if (!rawStats) return;
+if (!rawStats) continue;
 
 // =========================
 // 🧍 SKATERS
