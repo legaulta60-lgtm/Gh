@@ -62,8 +62,8 @@ async function postStatLeaders(client) {
 // =========================
 // 📊 LOAD DATA
 // =========================
-const skaterRows = await getSheetValues("Player Stats!A2:I1000");
-const goalieRows = await getSheetValues("Goalie Stats!A2:K1000");
+const skaterRows = await getSheetValues("Player Stats!A3:I1000");
+const goalieRows = await getSheetValues("Goalie Stats!A3:K1000");
 
 // =========================
 // 🏒 FORMAT SKATERS
@@ -278,11 +278,11 @@ so
 // =========================
 
 if (players.length) {
-await appendSheetValues("Player Stats!A2:I", players);
+await appendSheetValues("Player Stats!A3:I", players);
 }
 
 if (goalies.length) {
-await appendSheetValues("Goalie Stats!A2:I", goalies);
+await appendSheetValues("Goalie Stats!A3:I", goalies);
 }
 
 // =========================
