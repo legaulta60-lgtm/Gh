@@ -436,7 +436,6 @@ files: [file],
 // =========================
 // 📊 STANDINGS
 // =========================
-const standingsRows = await getSheetValues("Standings!K1:S12");
 
 if (standingsRows.length) {
 const replacements = {};
