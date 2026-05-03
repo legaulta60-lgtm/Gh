@@ -1056,10 +1056,6 @@ pageObjectIds: [tempSlideId],
 }
 
 // IMAGE replacements
-for (const key in imageReplacements) {
-const url = imageReplacements[key];
-
-if (!url) continue;
 
 requests.push({
 for (const key in imageReplacements) {
