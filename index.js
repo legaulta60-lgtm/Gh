@@ -426,16 +426,15 @@ files: [file],
 });
 }
 
-// =========================
-// 📊 STANDINGS
-// =========================
+async function postStandings(client) {
+const rows = await getSheetValues("Standings!K1:S12");
+if (!rows.length) return;
 
-if (standingsRows.length) {
 const replacements = {};
 const imageReplacements = {};
 
 for (let i = 0; i < 12; i++) {
-const row = standingsRows[i] || [];
+const row = rows[i] || [];
 const teamName = row[0] || "";
 
 replacements[`TEAM${i + 1}`] = teamName;
@@ -453,28 +452,27 @@ imageReplacements[`LOGO${i + 1}`] = TEAM_LOGOS[teamName];
 }
 }
 
-const standingsImage = await createImageFromTemplate(
+const image = await createImageFromTemplate(
 process.env.STANDINGS_TEMPLATE_ID,
 replacements,
 "standings.png",
 imageReplacements
 );
 
-const standingsChannel = await client.channels.fetch(STANDINGS_CHANNEL_ID);
+const channel = await client.channels.fetch(STANDINGS_CHANNEL_ID);
 
-await standingsChannel.send({
-files: [{ attachment: standingsImage, name: "standings.png" }]
+await channel.send({
+files: [{ attachment: image, name: "standings.png" }]
 });
 }
 
 
-// =========================
-// 🏆 STAT LEADERS
-// =========================
-const playerRows = await getSheetValues("Player Stats!A2:I1000");
 
-if (playerRows.length) {
-const players = playerRows.map((row) => ({
+async function postStatLeaders(client) {
+const playerRows = await getSheetValues("Player Stats!A2:I1000");
+if (!playerRows.length) return;
+
+const players = playerRows.map(row => ({
 Player: row[0],
 Team: row[1],
 PTS: Number(row[5]) || 0
@@ -496,20 +494,18 @@ imageReplacements[`PLOGO${i + 1}`] = TEAM_LOGOS[p.Team];
 }
 }
 
-const leadersImage = await createImageFromTemplate(
+const image = await createImageFromTemplate(
 process.env.LEADERS_TEMPLATE_ID,
 replacements,
 "leaders.png",
 imageReplacements
 );
 
-const leadersChannel = await client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
+const channel = await client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
 
-await leadersChannel.send({
-files: [{ attachment: leadersImage, name: "leaders.png" }]
+await channel.send({
+files: [{ attachment: image, name: "leaders.png" }]
 });
-}
-
 }
 
 
@@ -713,9 +709,6 @@ break;
 // =========================
 await rebuildStandings();
 
-const GAME_RESULTS_CHANNEL_ID = "1498059946116382731";
-const STANDINGS_CHANNEL_ID = "1498060011589472396";
-const STAT_LEADERS_CHANNEL_ID = "1498060011589472396";
 
 // =========================
 // 🏒 POST GAME RESULT (TEXT)
@@ -765,9 +758,9 @@ console.error("LEADERS ERROR:", err);
 }
 
 const gameChannel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
-await gameChannel.send(post);
 
-await postStandingsAndLeaders(interaction.client);
+
+
 
 return interaction.editReply("✅ Game recorded & posted.");  
 }
