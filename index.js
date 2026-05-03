@@ -700,7 +700,7 @@ objectIds: {
 },
 ];
 
-// TEXT
+// TEXT replacements
 for (const key in replacements) {
 const value = replacements[key];
 if (value === undefined || value === null) continue;
@@ -717,7 +717,7 @@ pageObjectIds: [tempSlideId],
 });
 }
 
-// IMAGES
+// IMAGE replacements
 for (const key in imageReplacements) {
 const url = imageReplacements[key];
 if (!url) continue;
@@ -735,12 +735,15 @@ pageObjectIds: [tempSlideId],
 });
 }
 
+console.log("🛠 Sending batchUpdate with", requests.length, "requests");
+
 await slides.presentations.batchUpdate({
 presentationId: templateId,
 requestBody: { requests },
 });
 
-await new Promise((r) => setTimeout(r, 800));
+// 🔥 IMPORTANT: wait longer + ensure slide exists
+await new Promise((r) => setTimeout(r, 1500));
 
 const thumb = await slides.presentations.pages.getThumbnail({
 presentationId: templateId,
@@ -749,13 +752,19 @@ pageObjectId: tempSlideId,
 "thumbnailProperties.thumbnailSize": "LARGE",
 });
 
+if (!thumb.data.contentUrl) {
+throw new Error("Thumbnail generation failed");
+}
+
 const imageRes = await fetch(thumb.data.contentUrl);
 const arrayBuffer = await imageRes.arrayBuffer();
+
+console.log("✅ Image generated");
 
 return Buffer.from(arrayBuffer);
 
 } catch (err) {
-console.error("IMAGE ERROR:", err);
+console.error("❌ IMAGE ERROR:", err);
 throw err;
 
 } finally {
@@ -775,6 +784,8 @@ objectId: tempSlideId,
 }
 }
 }
+
+
 function normalize(value) {
   return String(value || "")
     .trim()
