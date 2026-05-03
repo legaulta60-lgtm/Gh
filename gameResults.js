@@ -78,13 +78,18 @@ TA: Number(r[7]) || 0,
 INT: Number(r[8]) || 0
 }));
 
-const goalies = goalieRows.map(r => ({
+const goalies = goalieRows.map(r => {
+const saves = Number(r[6]) || 0;
+const shots = Number(r[7]) || 0;
+
+return {
 name: r[0],
 team: r[1],
-SV: Number(r[6]) || 0,
+SV: shots > 0 ? (saves / shots).toFixed(3) : 0, // FIXED
 GAA: Number(r[5]) || 0,
 SO: Number(r[8]) || 0
-}));
+};
+});
 
 const top = (arr, key) => [...arr].sort((a,b)=>b[key]-a[key]).slice(0,5);
 
@@ -233,7 +238,7 @@ for (const r of master) {
 const name=r[1], team=r[2];
 
 // skater
-if (!isNaN(r[3])) {
+if (r[3] !== null && r[3] !== "" && r[8] === null) {
 if (!players[name]) players[name]=[name,team,0,0,0,0,0,0,0];
 players[name][2]++;
 players[name][3]+=+r[3];
@@ -245,7 +250,7 @@ players[name][8]+=+r[7];
 }
 
 // goalie
-if (!isNaN(r[8])) {
+if (r[8] !== null && r[8] !== "") {
 if (!goalies[name]) goalies[name]=[name,team,0,0,0,0,0,0,0];
 const saves=+r[8], shots=+r[9];
 goalies[name][2]++;
