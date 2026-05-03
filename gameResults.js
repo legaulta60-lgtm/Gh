@@ -195,11 +195,9 @@ let mode = null;
 let currentTeam = null;
 
 const masterRows = [];
-const playerRows = [];
-const goalieRows = [];
 
 // =========================
-// 🧠 PARSE HEADER (GAME + SCORE)
+// PARSE HEADER
 // =========================
 for (const line of lines) {
 if (line.toLowerCase().startsWith("game:")) {
@@ -222,7 +220,7 @@ awayScore = Number(match[4]);
 const winner = homeScore > awayScore ? homeTeam : awayTeam;
 
 // =========================
-// 🏒 PARSE PLAYERS + GOALIES
+// PARSE PLAYERS
 // =========================
 for (const line of lines) {
 if (!line) continue;
@@ -247,9 +245,7 @@ if (!line.includes(":")) continue;
 const [name, rawStats] = line.split(":").map(s => s.trim());
 if (!rawStats) continue;
 
-// =========================
-// 🧍 SKATERS
-// =========================
+// SKATER
 if (mode === "SKATERS") {
 const g = Number((rawStats.match(/(\d+)G/) || [0, 0])[1]);
 const a = Number((rawStats.match(/(\d+)A(?![A-Z])/i) || [0, 0])[1]);
@@ -257,29 +253,16 @@ const ta = Number((rawStats.match(/(\d+)TA/) || [0, 0])[1]);
 const int = Number((rawStats.match(/(\d+)INT/) || [0, 0])[1]);
 const bs = Number((rawStats.match(/(\d+)BS/) || [0, 0])[1]);
 
-const pts = g + a;
-
-// MASTER STATS (RAW)
 masterRows.push([
 gameId, name, currentTeam,
-g, a, pts, bs, ta, int,
-"", "", "", ""
-]);
-
-// PLAYER TOTALS
-playerRows.push([
-name, currentTeam, 1,
-g, a, pts, bs, ta, int
+g, a, bs, ta, int,
+"", "", "", "", ""
 ]);
 }
 
-// =========================
-// 🧤 GOALIES
-// =========================
+// GOALIE
 if (mode === "GOALIES") {
 const saveMatch = rawStats.match(/(\d+)\/(\d+)/);
-
-// 🚫 prevents skaters from entering goalie stats
 if (!saveMatch) continue;
 
 const saves = Number(saveMatch[1]);
@@ -288,70 +271,106 @@ const ga = shots - saves;
 
 const win = rawStats.includes("W") ? 1 : 0;
 const loss = rawStats.includes("L") ? 1 : 0;
-
-// ✅ CORRECT shutout logic
 const so = ga === 0 ? 1 : 0;
 
-goalieRows.push([
-name,
-currentTeam,
-1,
-win,
-loss,
-ga,
-saves,
-shots,
-so
+masterRows.push([
+gameId, name, currentTeam,
+"", "", "", "", "",
+saves, shots, win, loss, so
 ]);
 }
 }
 
-// =========================
-// 📝 WRITE TO SHEETS
-// =========================
-
+// WRITE MASTER
 if (masterRows.length) {
 await appendSheetValues("Master Stats!A3:M", masterRows);
 }
 
-if (playerRows.length) {
-await appendSheetValues("Player Stats!A3:I", playerRows);
-}
-
-if (goalieRows.length) {
-await appendSheetValues("Goalie Stats!A3:I", goalieRows);
-}
-
-// =========================
-// 🏒 GAME RESULTS (SCORE ONLY)
-// =========================
+// WRITE GAME RESULT
 await appendSheetValues("Game Results!A2:F", [
 [gameId, homeTeam, awayTeam, homeScore, awayScore, winner]
 ]);
 
-// =========================
-// 📊 REBUILD STANDINGS
-// =========================
+// REBUILD EVERYTHING
+await rebuildAllStats();
 await rebuildStandings();
 
-// =========================
-// 📢 POST RECAP
-// =========================
-const gameChannel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
+// POST RECAP
+const channel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
 
-await gameChannel.send(
-`🏒 **Game ${gameId} Final**\n\n**${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**`
+await channel.send(
+`🏒 **Game ${gameId} Final**\n\n${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}`
 );
 
-// =========================
-// 🖼️ POST IMAGES
-// =========================
 await postStandings(interaction.client);
 await postStatLeaders(interaction.client);
 
 return interaction.editReply("✅ Game recorded & posted.");
 }
 
+async function rebuildAllStats() {
+const master = await getSheetValues("Master Stats!A3:M1000");
+
+const playerMap = {};
+const goalieMap = {};
+
+for (const row of master) {
+const name = row[1];
+const team = row[2];
+
+// SKATER
+if (row[3] !== "") {
+if (!playerMap[name]) {
+playerMap[name] = [name, team, 0,0,0,0,0,0,0];
+}
+
+playerMap[name][2] += 1;
+playerMap[name][3] += Number(row[3]) || 0;
+playerMap[name][4] += Number(row[4]) || 0;
+playerMap[name][5] += (Number(row[3]) + Number(row[4])) || 0;
+playerMap[name][6] += Number(row[5]) || 0;
+playerMap[name][7] += Number(row[6]) || 0;
+playerMap[name][8] += Number(row[7]) || 0;
+}
+
+// GOALIE
+if (row[8] !== "") {
+if (!goalieMap[name]) {
+goalieMap[name] = [name, team, 0,0,0,0,0,0,0];
+}
+
+const saves = Number(row[8]) || 0;
+const shots = Number(row[9]) || 0;
+const ga = shots - saves;
+
+goalieMap[name][2] += 1;
+goalieMap[name][3] += Number(row[10]) || 0;
+goalieMap[name][4] += Number(row[11]) || 0;
+goalieMap[name][5] += ga;
+goalieMap[name][6] += saves;
+goalieMap[name][7] += shots;
+goalieMap[name][8] += Number(row[12]) || 0;
+}
+}
+
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Player Stats!A3:I",
+});
+
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Goalie Stats!A3:I",
+});
+
+if (Object.values(playerMap).length) {
+await updateSheetValues("Player Stats!A3:I", Object.values(playerMap));
+}
+
+if (Object.values(goalieMap).length) {
+await updateSheetValues("Goalie Stats!A3:I", Object.values(goalieMap));
+}
+}  
 
 return {
 handleGameResults
