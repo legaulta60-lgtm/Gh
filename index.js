@@ -1062,11 +1062,23 @@ const url = imageReplacements[key];
 if (!url) continue;
 
 requests.push({
+for (const key in imageReplacements) {
+const url = imageReplacements[key];
+
+if (!url) continue;
+
+requests.push({
 replaceAllShapesWithImage: {
+containsText: {
+text: `{{${key}}}`,
+matchCase: true,
+},
 imageUrl: url,
 replaceMethod: "CENTER_CROP",
 pageObjectIds: [tempSlideId],
 },
+});
+}
 });
 }
 
