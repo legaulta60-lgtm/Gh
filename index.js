@@ -934,13 +934,15 @@ replacements,
 fileName,
 imageReplacements = {}
 ) {
+let tempSlideId;
+
 try {
 const pres = await slides.presentations.get({
 presentationId: templateId,
 });
 
 const sourceSlideId = pres.data.slides[0].objectId;
-const tempSlideId = `TEMP_${Date.now()}`;
+tempSlideId = `TEMP_${Date.now()}`;
 
 const requests = [
 {
@@ -955,12 +957,8 @@ objectIds: {
 
 // TEXT replacements
 for (const key in replacements) {
-
-if (!key || key.includes("undefined")) continue;
-
 const value = replacements[key];
-
-if (value === undefined || value === null) continue;
+if (!value && value !== 0) continue;
 
 requests.push({
 replaceAllText: {
@@ -974,10 +972,9 @@ pageObjectIds: [tempSlideId],
 });
 }
 
-// IMAGE replacements
+// IMAGE replacements (FIXED LOOP)
 for (const key in imageReplacements) {
 const url = imageReplacements[key];
-
 if (!url) continue;
 
 requests.push({
@@ -992,8 +989,47 @@ pageObjectIds: [tempSlideId],
 },
 });
 }
-}
+
+await slides.presentations.batchUpdate({
+presentationId: templateId,
+requestBody: { requests },
 });
+
+await new Promise((r) => setTimeout(r, 800));
+
+const thumb = await slides.presentations.pages.getThumbnail({
+presentationId: templateId,
+pageObjectId: tempSlideId,
+"thumbnailProperties.mimeType": "PNG",
+"thumbnailProperties.thumbnailSize": "LARGE",
+});
+
+const imageRes = await fetch(thumb.data.contentUrl);
+const arrayBuffer = await imageRes.arrayBuffer();
+
+return Buffer.from(arrayBuffer);
+
+} catch (err) {
+console.error("IMAGE ERROR:", err);
+throw err;
+
+} finally {
+if (tempSlideId) {
+await slides.presentations.batchUpdate({
+presentationId: templateId,
+requestBody: {
+requests: [
+{
+deleteObject: {
+objectId: tempSlideId,
+},
+},
+],
+},
+}).catch(() => {});
+}
+}
+}
 
 
 await slides.presentations.batchUpdate({
