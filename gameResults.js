@@ -183,7 +183,7 @@ async function handleGameResults(interaction) {
 await interaction.deferReply();
 
 const input = interaction.options.getString("input");
-const linked = (await getSheetValues("Linked Player!A:C")) || [];
+const linked = (await getSheetValues("Linked Players!A:C")) || [];
 const lines = input.split("\n").map(l => l.trim());
 
 let gameId = Date.now();
