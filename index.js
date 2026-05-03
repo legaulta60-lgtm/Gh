@@ -975,8 +975,8 @@ pageObjectIds: [tempSlideId],
 }
 
 // IMAGE replacements
-
-  const url = imageReplacements[key];
+for (const key in imageReplacements) {
+const url = imageReplacements[key];
 
 if (!url) continue;
 
@@ -992,8 +992,9 @@ pageObjectIds: [tempSlideId],
 },
 });
 }
-});
 }
+});
+
 
 await slides.presentations.batchUpdate({
 presentationId: templateId,
