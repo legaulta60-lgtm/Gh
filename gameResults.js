@@ -29,6 +29,8 @@ img[`LOGO${i+1}`] = TEAM_LOGOS[r[0]];
 }
 }
 
+console.log("REPLACEMENTS KEYS:", Object.keys(replacements));
+console.log("SAMPLE:", replacements["GP1"]);  
 const image = await createImageFromTemplate(
 process.env.STANDINGS_TEMPLATE_ID,
 rep,
@@ -64,6 +66,8 @@ img[`PLOGO${i+1}`] = TEAM_LOGOS[p.team];
 }
 }
 
+console.log("REPLACEMENTS KEYS:", Object.keys(replacements));
+console.log("SAMPLE:", replacements["GP1"]);
 const image = await createImageFromTemplate(
 process.env.LEADERS_TEMPLATE_ID,
 rep,
