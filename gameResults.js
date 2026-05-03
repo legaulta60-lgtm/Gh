@@ -12,7 +12,7 @@ STAT_LEADERS_CHANNEL_ID
 }) {
 
 async function postStandings(client) {
-const rows = await getSheetValues("Standings!K1:S12");
+const rows = await getSheetValues("Standings!K2:S12");
 if (!rows.length) return;
 
 const rep = {};
