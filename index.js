@@ -2,6 +2,8 @@ const GAME_RESULTS_CHANNEL_ID="1498059946116382731";
 const STANDINGS_CHANNEL_ID="1498060011589472396";
 const STAT_LEADERS_CHANNEL_ID="1498060011589472396";
 
+const createGameResults = require("./gameResults");
+
 const {
   Client,
   GatewayIntentBits,
@@ -426,87 +428,6 @@ files: [file],
 });
 }
 
-async function postStandings(client) {
-const rows = await getSheetValues("Standings!K1:S12");
-if (!rows.length) return;
-
-const replacements = {};
-const imageReplacements = {};
-
-for (let i = 0; i < 12; i++) {
-const row = rows[i] || [];
-const teamName = row[0] || "";
-
-replacements[`TEAM${i + 1}`] = teamName;
-replacements[`GP${i + 1}`] = row[1] || "0";
-replacements[`W${i + 1}`] = row[2] || "0";
-replacements[`L${i + 1}`] = row[3] || "0";
-replacements[`OT${i + 1}`] = row[4] || "0";
-replacements[`PT${i + 1}`] = row[5] || "0";
-replacements[`GF${i + 1}`] = row[6] || "0";
-replacements[`GA${i + 1}`] = row[7] || "0";
-replacements[`DF${i + 1}`] = row[8] || "0";
-
-if (TEAM_LOGOS[teamName]) {
-imageReplacements[`LOGO${i + 1}`] = TEAM_LOGOS[teamName];
-}
-}
-
-const image = await createImageFromTemplate(
-process.env.STANDINGS_TEMPLATE_ID,
-replacements,
-"standings.png",
-imageReplacements
-);
-
-const channel = await client.channels.fetch(STANDINGS_CHANNEL_ID);
-
-await channel.send({
-files: [{ attachment: image, name: "standings.png" }]
-});
-}
-
-
-
-async function postStatLeaders(client) {
-const playerRows = await getSheetValues("Player Stats!A2:I1000");
-if (!playerRows.length) return;
-
-const players = playerRows.map(row => ({
-Player: row[0],
-Team: row[1],
-PTS: Number(row[5]) || 0
-}));
-
-players.sort((a, b) => b.PTS - a.PTS);
-
-const replacements = {};
-const imageReplacements = {};
-
-for (let i = 0; i < 5; i++) {
-const p = players[i] || {};
-
-replacements[`PN${i + 1}`] = p.Player || "";
-replacements[`PP${i + 1}`] = p.PTS || "0";
-
-if (p.Team && TEAM_LOGOS[p.Team]) {
-imageReplacements[`PLOGO${i + 1}`] = TEAM_LOGOS[p.Team];
-}
-}
-
-const image = await createImageFromTemplate(
-process.env.LEADERS_TEMPLATE_ID,
-replacements,
-"leaders.png",
-imageReplacements
-);
-
-const channel = await client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
-
-await channel.send({
-files: [{ attachment: image, name: "leaders.png" }]
-});
-}
 
 
 async function handleGameResults(interaction) {
@@ -565,8 +486,6 @@ return linked.some(row => normalize(row[2]) === normalize(player));
 const masterRows = [];
 const unlinkedRows = [];
 
-const skaterOutput = {};
-const goalieOutput = {};
 
 // =========================
 // 🏒 PARSE STATS
@@ -1057,9 +976,7 @@ pageObjectIds: [tempSlideId],
 
 // IMAGE replacements
 
-requests.push({
-for (const key in imageReplacements) {
-const url = imageReplacements[key];
+  const url = imageReplacements[key];
 
 if (!url) continue;
 
@@ -1178,6 +1095,10 @@ ephemeral: true,
 return handleRemoveGame(interaction);
 }
 
+if (interaction.commandName === "gameresults") {
+  return handleGameResults(interaction);
+}
+
 } catch (err) {
 console.error(err);
 
@@ -1187,6 +1108,19 @@ await interaction.editReply("❌ Error occurred.");
 await interaction.reply("❌ Error occurred.");
 }
 }
+});
+
+const { handleGameResults } = createGameResults({
+sheets,
+slides,
+getSheetValues,
+appendSheetValues,
+updateSheetValues,
+createImageFromTemplate,
+TEAM_LOGOS,
+GAME_RESULTS_CHANNEL_ID,
+STANDINGS_CHANNEL_ID,
+STAT_LEADERS_CHANNEL_ID
 });
 
 client.login(process.env.DISCORD_TOKEN);
