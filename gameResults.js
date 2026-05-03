@@ -262,6 +262,9 @@ g, a, bs, ta, int,
 
 // GOALIE
 if (mode === "GOALIES") {
+const isGoalie = rawStats.includes("/") && (rawStats.includes("W") || rawStats.includes("L"));
+if (!isGoalie) continue;
+
 const saveMatch = rawStats.match(/(\d+)\/(\d+)/);
 if (!saveMatch) continue;
 
