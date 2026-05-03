@@ -166,35 +166,6 @@ async function handleLinkPlayer(interaction) {
     await appendSheetValues("Linked Players!A:C", [[userId, userName, player]]);
   }
 
-  // =========================
-  // 🔥 ENSURE PLAYER EXISTS IN PLAYER STATS
-  // =========================
-  const playerStats = await getSheetValues("Player Stats!A2:A1000");
-
-  const existsInPlayers = playerStats.some(
-    (row) => normalize(row[0]) === normalize(player),
-  );
-
-  if (!existsInPlayers) {
-    await appendSheetValues("Player Stats!A:I", [
-      [player, "", 0, 0, 0, 0, 0, 0, 0],
-    ]);
-  }
-
-  // =========================
-  // 🔥 ENSURE PLAYER EXISTS IN GOALIE STATS
-  // =========================
-  const goalieStats = await getSheetValues("Goalie Stats!A2:A1000");
-
-  const existsInGoalies = goalieStats.some(
-    (row) => normalize(row[0]) === normalize(player),
-  );
-
-  if (!existsInGoalies) {
-    await appendSheetValues("Goalie Stats!A:K", [
-      [player, "", 0, 0, 0, 0, 0, 0, "", "", 0],
-    ]);
-  }
 
   return interaction.reply(`✅ Linked to player: **${player}**`);
 }
@@ -470,7 +441,11 @@ updateTeam(home, h, a, h > a);
 updateTeam(away, a, h, a > h);
 }
 
-standings.sort((a, b) => b[5] - a[5]);
+standings.sort((a, b) => {
+if (b[5] !== a[5]) return b[5] - a[5];
+if (b[8] !== a[8]) return b[8] - a[8];
+return b[6] - a[6];
+});
 
 await sheets.spreadsheets.values.clear({
 spreadsheetId: process.env.SHEET_ID,
