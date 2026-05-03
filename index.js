@@ -139,35 +139,35 @@ client.once("ready", () => {
 
 
 async function handleLinkPlayer(interaction) {
-  const userId = interaction.user.id;
-  const userName = interaction.user.username;
-  const player = interaction.options.getString("player").trim();
+await interaction.deferReply({ ephemeral: true });
 
-  const linkedRows = await getSheetValues("Linked Players!A:C");
+const userId = interaction.user.id;
+const userName = interaction.user.username;
+const player = interaction.options.getString("player").trim();
 
-  const sameUserIndex = linkedRows.findIndex((row) => row[0] === userId);
-  const samePlayerIndex = linkedRows.findIndex(
-    (row) => normalize(row[2]) === normalize(player) && row[0] !== userId,
-  );
+const linkedRows = await getSheetValues("Linked Players!A:C");
 
-  if (samePlayerIndex >= 0) {
-    return interaction.reply(
-      `❌ **${player}** is already linked to another Discord account.`,
-    );
-  }
+const sameUserIndex = linkedRows.findIndex(row => row[0] === userId);
+const samePlayerIndex = linkedRows.findIndex(
+row => normalize(row[2]) === normalize(player) && row[0] !== userId
+);
 
-  // ✅ Update or insert into Linked Players
-  if (sameUserIndex >= 0) {
-    const rowNumber = sameUserIndex + 1;
-    await updateSheetValues(`Linked Players!A${rowNumber}:C${rowNumber}`, [
-      [userId, userName, player],
-    ]);
-  } else {
-    await appendSheetValues("Linked Players!A:C", [[userId, userName, player]]);
-  }
+if (samePlayerIndex >= 0) {
+return interaction.editReply(
+`❌ **${player}** is already linked to another Discord account.`
+);
+}
 
+if (sameUserIndex >= 0) {
+const rowNumber = sameUserIndex + 1;
+await updateSheetValues(`Linked Players!A${rowNumber}:C${rowNumber}`, [
+[userId, userName, player],
+]);
+} else {
+await appendSheetValues("Linked Players!A:C", [[userId, userName, player]]);
+}
 
-  return interaction.reply(`✅ Linked to player: **${player}**`);
+return interaction.editReply(`✅ Linked to player: **${player}**`);
 }
 
 async function handleMyStats(interaction) {
