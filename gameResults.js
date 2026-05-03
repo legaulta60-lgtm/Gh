@@ -8,7 +8,8 @@ createImageFromTemplate,
 TEAM_LOGOS,
 GAME_RESULTS_CHANNEL_ID,
 STANDINGS_CHANNEL_ID,
-STAT_LEADERS_CHANNEL_ID
+STAT_LEADERS_CHANNEL_ID,
+rebuildStandings
 }) {
 
 // =========================
@@ -182,33 +183,60 @@ async function handleGameResults(interaction) {
 await interaction.deferReply();
 
 const input = interaction.options.getString("input");
-
-await appendSheetValues("Game Results!A2:F", [
-[Date.now(), input]
-]);
-
 const lines = input.split("\n").map(l => l.trim());
 
-let mode = null; // "SKATERS" or "GOALIES"
+let gameId = Date.now();
+let homeTeam = "";
+let awayTeam = "";
+let homeScore = 0;
+let awayScore = 0;
+
+let mode = null;
 let currentTeam = null;
 
-const players = [];
-const goalies = [];
+const masterRows = [];
+const playerRows = [];
+const goalieRows = [];
 
-for (let line of lines) {
+// =========================
+// 🧠 PARSE HEADER (GAME + SCORE)
+// =========================
+for (const line of lines) {
+if (line.toLowerCase().startsWith("game:")) {
+gameId = line.split(":")[1].trim();
+}
+
+if (line.toLowerCase().startsWith("score:")) {
+const clean = line.replace(/score:/i, "").trim();
+const match = clean.match(/(.+?)\s+(\d+)\s*-\s*(.+?)\s+(\d+)/);
+
+if (match) {
+homeTeam = match[1].trim();
+homeScore = Number(match[2]);
+awayTeam = match[3].trim();
+awayScore = Number(match[4]);
+}
+}
+}
+
+const winner = homeScore > awayScore ? homeTeam : awayTeam;
+
+// =========================
+// 🏒 PARSE PLAYERS + GOALIES
+// =========================
+for (const line of lines) {
 if (!line) continue;
 
-// Detect sections
 if (line.toUpperCase() === "SKATERS") {
 mode = "SKATERS";
 continue;
 }
+
 if (line.toUpperCase() === "GOALIES") {
 mode = "GOALIES";
 continue;
 }
 
-// Detect team names
 if (!line.includes(":") && mode) {
 currentTeam = line;
 continue;
@@ -217,38 +245,32 @@ continue;
 if (!line.includes(":")) continue;
 
 const [name, rawStats] = line.split(":").map(s => s.trim());
-
-if (!rawStats) continue;
+if (!rawStats) return;
 
 // =========================
 // 🧍 SKATERS
 // =========================
 if (mode === "SKATERS") {
-const g = (rawStats.match(/(\d+)G/) || [0,0])[1];
-const a = (rawStats.match(/(\d+)A(?![A-Z])/i) || [0,0])[1]; // avoid TA
-const ta = (rawStats.match(/(\d+)TA/) || [0,0])[1];
-const int = (rawStats.match(/(\d+)INT/) || [0,0])[1];
-const bs = (rawStats.match(/(\d+)BS/) || [0,0])[1];
+const g = Number((rawStats.match(/(\d+)G/) || [0, 0])[1]);
+const a = Number((rawStats.match(/(\d+)A(?![A-Z])/i) || [0, 0])[1]);
+const ta = Number((rawStats.match(/(\d+)TA/) || [0, 0])[1]);
+const int = Number((rawStats.match(/(\d+)INT/) || [0, 0])[1]);
+const bs = Number((rawStats.match(/(\d+)BS/) || [0, 0])[1]);
 
-const goals = parseInt(g) || 0;
-const assists = parseInt(a) || 0;
-const takeaways = parseInt(ta) || 0;
-const interceptions = parseInt(int) || 0;
-const blocks = parseInt(bs) || 0;
+const pts = g + a;
 
-if (goals || assists || takeaways || interceptions || blocks) {
-players.push([
-name,
-currentTeam,
-1,
-goals,
-assists,
-goals + assists,
-blocks,
-takeaways,
-interceptions
+// MASTER STATS (RAW)
+masterRows.push([
+gameId, name, currentTeam,
+g, a, pts, bs, ta, int,
+"", "", "", ""
 ]);
-}
+
+// PLAYER TOTALS
+playerRows.push([
+name, currentTeam, 1,
+g, a, pts, bs, ta, int
+]);
 }
 
 // =========================
@@ -256,57 +278,71 @@ interceptions
 // =========================
 if (mode === "GOALIES") {
 const saveMatch = rawStats.match(/(\d+)\/(\d+)/);
-
 if (!saveMatch) continue;
 
-const saves = parseInt(saveMatch[1]);
-const shots = parseInt(saveMatch[2]);
+const saves = Number(saveMatch[1]);
+const shots = Number(saveMatch[2]);
 const ga = shots - saves;
 
 const win = rawStats.includes("W") ? 1 : 0;
 const loss = rawStats.includes("L") ? 1 : 0;
 const so = rawStats.includes("SO") ? 1 : 0;
 
-goalies.push([
-name,
-currentTeam,
-1,
-win,
-loss,
-ga,
-saves,
-shots,
-so
+// MASTER STATS
+masterRows.push([
+gameId, name, currentTeam,
+"", "", "", "", "", "",
+saves, shots, win, loss, so
+]);
+
+// GOALIE TOTALS
+goalieRows.push([
+name, currentTeam, 1,
+win, loss, ga, saves, shots, so
 ]);
 }
 }
 
 // =========================
-// 📊 WRITE TO SHEETS
+// 📝 WRITE TO SHEETS
 // =========================
 
-if (players.length) {
-await appendSheetValues("Player Stats!A3:I", players);
+if (masterRows.length) {
+await appendSheetValues("Master Stats!A3:M", masterRows);
 }
 
-if (goalies.length) {
-await appendSheetValues("Goalie Stats!A3:I", goalies);
+if (playerRows.length) {
+await appendSheetValues("Player Stats!A3:I", playerRows);
 }
+
+if (goalieRows.length) {
+await appendSheetValues("Goalie Stats!A3:I", goalieRows);
+}
+
+// =========================
+// 🏒 GAME RESULTS (SCORE ONLY)
+// =========================
+await appendSheetValues("Game Results!A2:F", [
+[gameId, homeTeam, awayTeam, homeScore, awayScore, winner]
+]);
+
+// =========================
+// 📊 REBUILD STANDINGS
+// =========================
+await rebuildStandings();
 
 // =========================
 // 📢 POST RECAP
 // =========================
-
 const gameChannel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
 
 await gameChannel.send(
-`🏒 **New Game Result Submitted**\n\n${input}`
+`🏒 **Game ${gameId} Final**\n\n**${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}**`
 );
 
 // =========================
-// 📊 POST IMAGES
+// 🖼️ POST IMAGES
 // =========================
-
 await postStandings(interaction.client);
 await postStatLeaders(interaction.client);
 
