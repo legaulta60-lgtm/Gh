@@ -277,7 +277,7 @@ const teamName = interaction.options.getString("team").trim();
 // =========================
 // 📊 GET TEAM FROM STANDINGS
 // =========================
-const standings = await getSheetValues("Standings!K1:S50");
+const standings = await getSheetValues("Standings!K2:S50");
 
 const team = standings.find(
 (row) => normalize(row[0]) === normalize(teamName)
@@ -641,7 +641,7 @@ async function handleNotifyUnlinked(interaction) {
 }
 
 async function getTeams() {
-  const rows = await getSheetValues("Standings!K1:K50");
+  const rows = await getSheetValues("Standings!K2:K50");
   return rows.map((row) => row[0]).filter(Boolean);
 }
 
