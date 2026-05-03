@@ -64,23 +64,39 @@ if (!rows.length) return;
 const players = rows.map(r => ({
 name: r[0],
 team: r[1],
-pts: Number(r[5]) || 0
-}))
-.sort((a,b) => b.pts - a.pts);
+goals: Number(r[3]) || 0,
+assists: Number(r[4]) || 0,
+pts: Number(r[5]) || 0,
+blocks: Number(r[6]) || 0,
+takeaways: Number(r[7]) || 0,
+interceptions: Number(r[8]) || 0
+}));
 
 const rep = {};
 const img = {};
 
-for (let i = 0; i < 5; i++) {
-const p = players[i] || {};
+function fillTop(statKey, prefix) {
+const sorted = [...players].sort((a, b) => b[statKey] - a[statKey]);
 
-rep[`PN${i+1}`] = p.name || "";
-rep[`PP${i+1}`] = p.pts || "0";
+for (let i = 0; i < 5; i++) {
+const p = sorted[i] || {};
+
+rep[`${prefix}N${i+1}`] = p.name || "";
+rep[`${prefix}P${i+1}`] = p[statKey] || "0";
 
 if (TEAM_LOGOS[p.team]) {
-img[`PLOGO${i+1}`] = TEAM_LOGOS[p.team];
+img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
 }
 }
+}
+
+// 🔥 Fill each category
+fillTop("pts", "P"); // Points
+fillTop("goals", "G"); // Goals
+fillTop("assists", "A"); // Assists
+fillTop("blocks", "B"); // Blocks
+fillTop("takeaways", "T"); // Takeaways
+fillTop("interceptions", "I"); // Interceptions
 
 const image = await createImageFromTemplate(
 process.env.LEADERS_TEMPLATE_ID,
