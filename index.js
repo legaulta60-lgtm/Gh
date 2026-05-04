@@ -69,6 +69,11 @@ const commands = [
         .setRequired(true)
     ),
 
+
+  new SlashCommandBuilder()
+.setName("notifyunlinked")
+.setDescription("Show unlinked players")
+  
   new SlashCommandBuilder()
     .setName("teamstats")
     .setDescription("View a team stats card")
@@ -854,6 +859,10 @@ ephemeral: true,
 
 if (interaction.commandName === "linkplayer") {
 return handleLinkPlayer(interaction);
+}    
+
+if (interaction.commandName === "notifyunlinked") {
+return handleNotifyUnlinked(interaction);
 }    
 
 if (interaction.commandName === "removegame") {
