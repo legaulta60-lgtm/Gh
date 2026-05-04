@@ -72,7 +72,7 @@ const commands = [
 
   new SlashCommandBuilder()
 .setName("notifyunlinked")
-.setDescription("Show unlinked players")
+.setDescription("Show unlinked players"),
   
   new SlashCommandBuilder()
     .setName("teamstats")
