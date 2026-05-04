@@ -484,10 +484,11 @@ return interaction.editReply("❌ Error fetching unlinked players.");
 }  
   
 
-return { 
-  handleGameResults,
-  handleLinkPlayer,
-  handleNotifyUnlinked
-       
+return {
+handleGameResults,
+handleLinkPlayer,
+handleNotifyUnlinked,
+handleMyStats,
+handleTeamStats
 };
 };
