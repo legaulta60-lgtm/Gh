@@ -300,40 +300,102 @@ console.error("Safe reply failed:", err);
 }
 }
 
-module.exports = function ({
-getSheetValues,
-createImageFromTemplate
-}) {
+module.exports = function ({ getSheetValues }) {
 
+function normalize(value) {
+return String(value || "").trim().toLowerCase();
+}
+
+// =========================
+// 🎯 DROPDOWN MENU
+// =========================
 async function handleSchedule(interaction) {
-try {
-await interaction.deferReply();
+const teams = [
+"Buffalo Sabres",
+"Fort Erie Hawks",
+"Montreal Canadiens",
+"Super Cobras",
+"Toronto Marlies",
+"Toronto Maple Leafs",
+];
 
-const team = interaction.options.getString("team");
-
-const rows = await getSheetValues("Schedule!A2:E200");
-
-const games = rows.filter(r =>
-r[3] === team || r[4] === team
+const menu = new StringSelectMenuBuilder()
+.setCustomId("schedule_team_select")
+.setPlaceholder("Select a team")
+.addOptions(
+teams.map(team => ({
+label: team,
+value: team,
+}))
 );
 
+const row = new ActionRowBuilder().addComponents(menu);
+
+return interaction.reply({
+content: "Select a team:",
+components: [row],
+});
+}
+
+// =========================
+// 📅 TEAM SCHEDULE (FIXED)
+// =========================
+async function handleScheduleTeamSelect(interaction) {
+try {
+await interaction.deferUpdate();
+
+const team = interaction.values[0];
+
+const rows = await getSheetValues("Schedule!A2:I");
+
+// 🔥 FIXED FILTER (CORRECT + NORMALIZED)
+const games = rows.filter(row => {
+const home = row[2];
+const away = row[3];
+
+return (
+normalize(home) === normalize(team) ||
+normalize(away) === normalize(team)
+);
+});
+
 if (!games.length) {
-return interaction.editReply("❌ No games.");
+return interaction.editReply({
+content: "❌ No games found.",
+components: [],
+});
 }
 
-let msg = `📅 ${team}\n\n`;
+// =========================
+// 🧾 FORMAT GAMES
+// =========================
+let text = `📅 **${team} Schedule**\n\n`;
 
-for (const g of games.slice(0,10)) {
-msg += `${g[2]} — ${g[3]} vs ${g[4]}\n`;
+for (const g of games.slice(0, 15)) {
+const date = g[0] || "TBD";
+const home = g[2];
+const away = g[3];
+const status = g[7] || "UPCOMING";
+
+text += `${date} — ${home} vs ${away} (${status})\n`;
 }
 
-return interaction.editReply(msg);
+return interaction.editReply({
+content: text,
+components: [],
+});
 
 } catch (err) {
 console.error(err);
-return interaction.editReply("❌ Error.");
+return interaction.editReply({
+content: "❌ Error loading schedule.",
+components: [],
+});
 }
 }
 
-return { handleSchedule };
+return {
+handleSchedule,
+handleScheduleTeamSelect
+};
 };
