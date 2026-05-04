@@ -314,9 +314,30 @@ normalize(r[2]) === normalize(playerName)
 );
 
 if (!alreadyLinked) {
-await appendSheetValues("Linked Players!A:C", [
-[discordId, discordName, playerName]
+const linked = await getSheetValues("Linked Players!A2:C1000");
+
+let foundIndex = -1;
+
+for (let i = 0; i < linked.length; i++) {
+if (normalize(linked[i][2]) === normalize(playerName)) {
+foundIndex = i;
+break;
+}
+}
+
+if (foundIndex !== -1) {
+// UPDATE EXISTING ROW
+const rowNumber = foundIndex + 2; // because A2 starts at row 2
+
+await updateSheetValues(`Linked Players!A${rowNumber}:C${rowNumber}`, [
+[discordId, discordName || "", playerName]
 ]);
+} else {
+// ADD NEW ROW
+await appendSheetValues("Linked Players!A:C", [
+[discordId, discordName || "", playerName]
+]);
+}
 }
 
 // =========================
