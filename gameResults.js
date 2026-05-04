@@ -440,11 +440,54 @@ console.error(err);
 return interaction.editReply("❌ Error linking player.");
 }
 }
+
+
+async function handleNotifyUnlinked(interaction) {
+try {
+await interaction.deferReply();
+
+const rows = await getSheetValues("Unlinked Players!A2:C1000");
+
+if (!rows || !rows.length) {
+return interaction.editReply("✅ No unlinked players.");
+}
+
+const seen = new Set();
+const list = [];
+
+for (const r of rows) {
+const name = r[1];
+const team = r[2];
+
+if (!name) continue;
+
+const key = normalize(name);
+
+if (!seen.has(key)) {
+seen.add(key);
+list.push(`• ${name}${team ? ` (${team})` : ""}`);
+}
+}
+
+if (!list.length) {
+return interaction.editReply("✅ No unlinked players.");
+}
+
+return interaction.editReply(
+`⚠️ **Unlinked Players:**\n\n${list.join("\n")}`
+);
+
+} catch (err) {
+console.error(err);
+return interaction.editReply("❌ Error fetching unlinked players.");
+}
+}  
   
 
 return { 
   handleGameResults,
-  handleLinkPlayer
+  handleLinkPlayer,
+  handleNotifyUnlinked
        
 };
 };
