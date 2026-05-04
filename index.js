@@ -89,9 +89,6 @@ const commands = [
     .setName("standings")
     .setDescription("View league standings"),
 
-  new SlashCommandBuilder()
-    .setName("notifyunlinked")
-    .setDescription("Show players with stats who are not linked"),
 
   new SlashCommandBuilder()
     .setName("schedule")
@@ -622,44 +619,6 @@ await updateSheetValues("Standings!K2:S50", standings);
 return interaction.editReply(`🗑️ Game ${gameId} fully removed.`);
 }
 
-
-async function handleNotifyUnlinked(interaction) {
-  await interaction.reply("⏳ Checking unlinked players...");
-
-  const rows = await getSheetValues("Unlinked Players!A2:C1000");
-
-  if (!rows.length) {
-    return interaction.editReply("✅ No unlinked players logged.");
-  }
-
-  const uniquePlayers = [];
-  const seen = new Set();
-
-  rows.forEach((row) => {
-    const name = row[1];
-    const team = row[2];
-    if (!name) return;
-
-    const key = normalize(name);
-
-    if (!seen.has(key)) {
-      seen.add(key);
-      uniquePlayers.push({ name, team });
-    }
-  });
-
-  const message =
-    `⚠️ **Incorrect Team Listings Found**\n\n` +
-    `The following players were found to not be linked to the bot:\n\n` +
-    uniquePlayers
-      .map(
-        (p) => `• ${p.name}, played a game with ${p.team || "Unknown Team"}.`,
-      )
-      .join("\n") +
-    `\n\nPlease tell them to run:\n/linkplayer player: TheirName`;
-
-  return interaction.editReply(message);
-}
 
 async function getTeams() {
   const rows = await getSheetValues("Standings!K2:K50");
