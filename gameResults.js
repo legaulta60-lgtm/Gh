@@ -482,6 +482,66 @@ console.error(err);
 return interaction.editReply("❌ Error fetching unlinked players.");
 }
 }  
+
+async function handleMyStats(interaction) {
+await interaction.deferReply();
+
+const userId = interaction.user.id;
+
+// 🔗 Get linked player
+const linkedRows = await getSheetValues("Linked Players!A:C");
+const link = linkedRows.find(row => row[0] === userId);
+
+if (!link) {
+return interaction.editReply("❌ You are not linked. Use /linkplayer first.");
+}
+
+const playerName = link[2];
+
+// 📊 Get stats
+const playerRows = await getSheetValues("Player Stats!A3:I");
+const goalieRows = await getSheetValues("Goalie Stats!A3:I");
+
+const skater = playerRows.find(r => r[0] === playerName);
+const goalie = goalieRows.find(r => r[0] === playerName);
+
+// 🧠 Build template replacements
+const rep = {};
+const img = {};
+
+// NAME
+rep.NAME = playerName;
+
+// 🏒 SKATER
+rep.GP = skater?.[2] || "0";
+rep.G = skater?.[3] || "0";
+rep.A = skater?.[4] || "0";
+rep.PTS = skater?.[5] || "0";
+rep.BS = skater?.[6] || "0";
+rep.TA = skater?.[7] || "0";
+rep.INT = skater?.[8] || "0";
+
+// 🥅 GOALIE
+const saves = Number(goalie?.[6]) || 0;
+const shots = Number(goalie?.[7]) || 0;
+
+rep.SV = shots > 0 ? (saves / shots).toFixed(3) : "0.000";
+rep.GAA = goalie?.[5] || "0";
+rep.SO = goalie?.[8] || "0";
+
+// 🖼️ Create image
+const image = await createImageFromTemplate(
+process.env.MYSTATS_TEMPLATE_ID, // 👈 make sure this exists
+rep,
+"mystats.png",
+img
+);
+
+// 📤 Send image
+return interaction.editReply({
+files: [{ attachment: image, name: "mystats.png" }]
+});
+}  
   
 
 return {
