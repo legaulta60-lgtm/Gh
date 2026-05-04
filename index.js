@@ -138,38 +138,6 @@ client.once("ready", () => {
 });
 
 
-async function handleLinkPlayer(interaction) {
-await interaction.deferReply({ ephemeral: true });
-
-const userId = interaction.user.id;
-const userName = interaction.user.username;
-const player = interaction.options.getString("player").trim();
-
-const linkedRows = await getSheetValues("Linked Players!A:C");
-
-const sameUserIndex = linkedRows.findIndex(row => row[0] === userId);
-const samePlayerIndex = linkedRows.findIndex(
-row => normalize(row[2]) === normalize(player) && row[0] !== userId
-);
-
-if (samePlayerIndex >= 0) {
-return interaction.editReply(
-`❌ **${player}** is already linked to another Discord account.`
-);
-}
-
-if (sameUserIndex >= 0) {
-const rowNumber = sameUserIndex + 1;
-await updateSheetValues(`Linked Players!A${rowNumber}:C${rowNumber}`, [
-[userId, userName, player],
-]);
-} else {
-await appendSheetValues("Linked Players!A:C", [[userId, userName, player]]);
-}
-
-return interaction.editReply(`✅ Linked to player: **${player}**`);
-}
-
 async function handleMyStats(interaction) {
   await interaction.deferReply();
 
