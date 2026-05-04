@@ -293,5 +293,69 @@ await updateSheetValues("Goalie Stats!A3:I", Object.values(goalies));
 }
 }
 
-return { handleGameResults };
+async function handleLinkPlayer(interaction) {
+await interaction.deferReply();
+
+const discordId = interaction.user.id;
+const discordName = interaction.user.username;
+const playerName = interaction.options.getString("player");
+
+if (!playerName) {
+return interaction.editReply("❌ You must enter a player name.");
+}
+
+// =========================
+// ADD TO LINKED PLAYERS
+// =========================
+const linked = await getSheetValues("Linked Players!A2:C");
+
+const alreadyLinked = linked.some(r =>
+normalize(r[2]) === normalize(playerName)
+);
+
+if (!alreadyLinked) {
+await appendSheetValues("Linked Players!A:C", [
+[discordId, discordName, playerName]
+]);
+}
+
+// =========================
+// CREATE PLAYER ROW (IF NOT EXISTS)
+// =========================
+const players = await getSheetValues("Player Stats!A3:A1000");
+
+const existsPlayer = players.some(r =>
+normalize(r[0]) === normalize(playerName)
+);
+
+if (!existsPlayer) {
+await appendSheetValues("Player Stats!A3:I", [
+[playerName, "", 0, 0, 0, 0, 0, 0, 0]
+]);
+}
+
+// =========================
+// CREATE GOALIE ROW (IF NOT EXISTS)
+// =========================
+const goalies = await getSheetValues("Goalie Stats!A3:A1000");
+
+const existsGoalie = goalies.some(r =>
+normalize(r[0]) === normalize(playerName)
+);
+
+if (!existsGoalie) {
+await appendSheetValues("Goalie Stats!A3:I", [
+[playerName, "", 0, 0, 0, 0, 0, 0, 0]
+]);
+}
+
+return interaction.editReply(`✅ Linked to **${playerName}**`);
+}
+  
+
+return { 
+  handleGameResults,
+  handleLinkPlayer
+       
+};
 };
