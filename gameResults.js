@@ -294,4 +294,3 @@ await updateSheetValues("Goalie Stats!A3:I", Object.values(goalies));
 }
 
 return { handleGameResults };
-};
