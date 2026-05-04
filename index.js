@@ -796,7 +796,6 @@ const {
 handleGameResults,
 handleLinkPlayer,
 handleNotifyUnlinked,
-handleMyStats,
 handleTeamStats
 } = createGameResults({
 sheets,
@@ -804,6 +803,7 @@ getSheetValues,
 appendSheetValues,
 updateSheetValues,
 createImageFromTemplate,
+handleMyStats,  
 TEAM_LOGOS,
 GAME_RESULTS_CHANNEL_ID,
 STANDINGS_CHANNEL_ID,
