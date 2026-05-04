@@ -805,7 +805,7 @@ STAT_LEADERS_CHANNEL_ID,
 rebuildStandings
 });
 
-const createSchedule = require("./schedule");
+const createSchedule = require("./scheduleCommand");
 
 const { handleSchedule } = createSchedule({
 getSheetValues,
