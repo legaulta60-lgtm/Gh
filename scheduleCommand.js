@@ -300,7 +300,40 @@ console.error("Safe reply failed:", err);
 }
 }
 
-module.exports = {
-handleSchedule,
-handleScheduleTeamSelect,
+module.exports = function ({
+getSheetValues,
+createImageFromTemplate
+}) {
+
+async function handleSchedule(interaction) {
+try {
+await interaction.deferReply();
+
+const team = interaction.options.getString("team");
+
+const rows = await getSheetValues("Schedule!A2:E200");
+
+const games = rows.filter(r =>
+r[3] === team || r[4] === team
+);
+
+if (!games.length) {
+return interaction.editReply("❌ No games.");
+}
+
+let msg = `📅 ${team}\n\n`;
+
+for (const g of games.slice(0,10)) {
+msg += `${g[2]} — ${g[3]} vs ${g[4]}\n`;
+}
+
+return interaction.editReply(msg);
+
+} catch (err) {
+console.error(err);
+return interaction.editReply("❌ Error.");
+}
+}
+
+return { handleSchedule };
 };
