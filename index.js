@@ -136,117 +136,106 @@ console.log(`Logged in as ${client.user.tag}`);
 
 
 async function handleTeamStats(interaction) {
+try {
 await interaction.deferReply();
 
-const teamName = interaction.options.getString("team").trim();
+const teamInput = interaction.options.getString("team");
 
 // =========================
 // 📊 GET TEAM FROM STANDINGS
 // =========================
 const standings = await getSheetValues("Standings!K2:S50");
 
-const team = standings.find(
-(row) => normalize(row[0]) === normalize(teamName)
+const teamRow = standings.find(
+row => normalize(row[0]) === normalize(teamInput)
 );
 
-if (!team) {
-return interaction.editReply("Team not found.");
+if (!teamRow) {
+return interaction.editReply("❌ Team not found.");
 }
 
-const teamNameClean = team[0];
+const team = teamRow[0];
 
-const gp = num(team[1]);
-const w = num(team[2]);
-const l = num(team[3]);
-const otl = num(team[4]);
-const pts = num(team[5]);
-const gf = num(team[6]);
-const ga = num(team[7]);
+const gp = Number(teamRow[1]) || 0;
+const w = Number(teamRow[2]) || 0;
+const l = Number(teamRow[3]) || 0;
+const otl = Number(teamRow[4]) || 0;
+const pts = Number(teamRow[5]) || 0;
+const gf = Number(teamRow[6]) || 0;
+const ga = Number(teamRow[7]) || 0;
 
 const diff = gf - ga;
 
-// =========================
-// 🎨 DIFF COLOR SYSTEM
-// =========================
-let DIFF_POS = "";
-let DIFF_NEG = "";
-
-if (diff >= 0) {
-DIFF_POS = `+${diff}`;
-} else {
-DIFF_NEG = `${diff}`;
-}
+const DIFF_POS = diff >= 0 ? `+${diff}` : "";
+const DIFF_NEG = diff < 0 ? `${diff}` : "";
 
 // =========================
 // 📊 GET PLAYERS
 // =========================
-const playerRows = await getSheetValues("Player Stats!A2:K1000");
+const playerRows = await getSheetValues("Player Stats!A3:I");
 
-const teamPlayers = playerRows.filter(
-(row) => normalize(row[1]) === normalize(teamNameClean)
-);
+const teamPlayers = playerRows
+.filter(r => normalize(r[1]) === normalize(team))
+.sort((a, b) => (Number(b[5]) || 0) - (Number(a[5]) || 0));
 
-// Top 2 forwards by points
-const topForwards = teamPlayers
-.sort((a, b) => num(b[5]) - num(a[5]))
-.slice(0, 2);
+const top1 = teamPlayers[0];
+const top2 = teamPlayers[1];
 
 // =========================
-// 🥅 GET GOALIES
+// 🧍 FORMAT FORWARDS
 // =========================
-const goalieRows = await getSheetValues("Goalie Stats!A2:K1000");
-
-const teamGoalies = goalieRows.filter(
-(row) => normalize(row[1]) === normalize(teamNameClean)
-);
-
-const topGoalie = teamGoalies.sort((a, b) => num(b[2]) - num(a[2]))[0];
-
-// =========================
-// 🧮 FORMAT FUNCTIONS
-// =========================
-
 function formatForward(p) {
 if (!p) return "N/A";
 
 const name = p[0];
-const gp = num(p[2]);
-const g = num(p[3]);
-const a = num(p[4]);
-const pts = num(p[5]);
+const gp = Number(p[2]) || 0;
+const g = Number(p[3]) || 0;
+const a = Number(p[4]) || 0;
+const pts = Number(p[5]) || 0;
 
-const ppg = gp > 0 ? (pts / gp).toFixed(2) : "0.00";
-
-return `${name} — ${gp} GP | ${g}G ${a}A ${pts}P | ${ppg} PPG`;
+return `${name}\n${gp} GP | ${g}G ${a}A ${pts}P`;
 }
 
+// =========================
+// 🥅 GET GOALIE
+// =========================
+const goalieRows = await getSheetValues("Goalie Stats!A3:I");
+
+const teamGoalies = goalieRows
+.filter(r => normalize(r[1]) === normalize(team))
+.sort((a, b) => (Number(b[2]) || 0) - (Number(a[2]) || 0));
+
+const goalie = teamGoalies[0];
+
+// =========================
+// 🧤 FORMAT GOALIE
+// =========================
 function formatGoalie(g) {
 if (!g) return "N/A";
 
 const name = g[0];
-const gp = num(g[2]);
-const w = num(g[3]);
-const saves = num(g[6]); // Saves column
-const shots = num(g[7]); // Shots Against column
-const ga = shots - saves;
-const so = num(g[10]);
+const gp = Number(g[2]) || 0;
+const w = Number(g[3]) || 0;
 
-const svPct =
-shots > 0
+const saves = Number(g[6]) || 0;
+const shots = Number(g[7]) || 0;
+
+const sv = shots > 0
 ? (saves / shots).toFixed(3).replace(/^0/, "")
 : ".000";
 
-const gaa = gp > 0 ? (ga / gp).toFixed(2) : "0.00";
+const gaa = gp > 0
+? ((shots - saves) / gp).toFixed(2)
+: "0.00";
 
-return `${name} — ${gp} GP | ${w}W | ${svPct} SV% | ${gaa} GAA | ${so} SO`;
+return `${name}\n${gp} GP | ${w}W | ${sv} SV% | ${gaa} GAA`;
 }
 
 // =========================
-// 🧾 REPLACEMENTS
+// 🧾 TEMPLATE VALUES
 // =========================
-
-const replacements = {
-TEAM: teamNameClean,
+const rep = {
+TEAM: team,
 
 GP: gp,
 W: w,
@@ -260,44 +249,44 @@ GA: ga,
 DIFF_POS,
 DIFF_NEG,
 
-FWD1: formatForward(topForwards[0]),
-FWD2: formatForward(topForwards[1]),
-GOALIE1: formatGoalie(topGoalie),
+FWD1: formatForward(top1),
+FWD2: formatForward(top2),
+GOALIE1: formatGoalie(goalie)
 };
 
 // =========================
-// 🖼️ LOGO
+// 🖼️ LOGO FIX
 // =========================
-
 const imageReplacements = {};
 
-if (TEAM_LOGOS[teamNameClean]) {
-imageReplacements.TEAM_LOGO = TEAM_LOGOS[teamNameClean];
+const logoKey = Object.keys(TEAM_LOGOS).find(
+key => normalize(key) === normalize(team)
+);
+
+if (logoKey) {
+imageReplacements.TEAM_LOGO = TEAM_LOGOS[logoKey];
 }
 
 // =========================
 // 🖼️ GENERATE IMAGE
 // =========================
-
-console.log("REPLACEMENTS KEYS:", Object.keys(replacements));
-console.log("GP1 VALUE:", replacements["GP1"]);
-console.log("FULL OBJECT:", replacements);
-
 const image = await createImageFromTemplate(
 process.env.TEAMSTATS_TEMPLATE_ID,
-replacements,
+rep,
 "teamstats.png",
 imageReplacements
 );
 
-const file = new AttachmentBuilder(image, { name: "teamstats.png" });
-
 return interaction.editReply({
-content: `**${teamNameClean} Team Stats**`,
-files: [file],
+content: `**${team} Team Stats**`,
+files: [{ attachment: image, name: "teamstats.png" }]
 });
-}
 
+} catch (err) {
+console.error(err);
+return interaction.editReply("❌ Error loading team stats.");
+}
+}
 
 async function rebuildStandings() {
 const results = await getSheetValues("Game Results!A2:F");
