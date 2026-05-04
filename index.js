@@ -3,135 +3,139 @@ const STANDINGS_CHANNEL_ID="1498060011589472396";
 const STAT_LEADERS_CHANNEL_ID="1498060011589472396";
 
 const {
-  Client,
-  GatewayIntentBits,
-  REST,
-  Routes,
-  SlashCommandBuilder,
-  AttachmentBuilder,
+Client,
+GatewayIntentBits,
+REST,
+Routes,
+SlashCommandBuilder,
+AttachmentBuilder,
 } = require("discord.js");
 
 const { google } = require("googleapis");
 
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
+const {
+handleSchedule,
+handleScheduleTeamSelect,
+} = require("./scheduleCommand");
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+intents: [GatewayIntentBits.Guilds],
 });
 
 const TEAM_LOGOS = {
-  "Buffalo Sabres": "https://i.imgur.com/5o8LJVa.png",
-  "Montreal Canadiens": "https://i.imgur.com/ZnW3lIE.png",
-  "Super Cobras": "https://i.imgur.com/KV87bDx.png",
-  "Toronto Marlies": "https://i.imgur.com/x25dwvT.png",
-  "Toronto Maple Leafs": "https://i.imgur.com/fsjxkMb.png",
-  "Fort Erie Hawks": "https://i.imgur.com/lO6lUWU.png",
+"Buffalo Sabres": "https://i.imgur.com/5o8LJVa.png",
+"Montreal Canadiens": "https://i.imgur.com/ZnW3lIE.png",
+"Super Cobras": "https://i.imgur.com/KV87bDx.png",
+"Toronto Marlies": "https://i.imgur.com/x25dwvT.png",
+"Toronto Maple Leafs": "https://i.imgur.com/fsjxkMb.png",
+"Fort Erie Hawks": "https://i.imgur.com/lO6lUWU.png",
 };
 
 // 🔒 ADMIN SYSTEM
 const ADMIN_ID = "769228708049190953";
 
 function isAdmin(interaction) {
-  return interaction.user.id === ADMIN_ID;
+return interaction.user.id === ADMIN_ID;
 }
 
 const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
-  scopes: [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/presentations",
-  ],
+credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
+scopes: [
+"https://www.googleapis.com/auth/spreadsheets",
+"https://www.googleapis.com/auth/presentations",
+],
 });
 
 const sheets = google.sheets({ version: "v4", auth });
 const slides = google.slides({ version: "v1", auth });
 
 const commands = [
-  
-  new SlashCommandBuilder()
-    .setName("mystats")
-    .setDescription("View your linked player stats"),
-  
-  new SlashCommandBuilder()
-    .setName("linkplayer")
-    .setDescription("Link your Discord to a player")
-    .addStringOption(option =>
-      option
-        .setName("player")
-        .setDescription("Your player name")
-        .setRequired(true)
-    ),
+
+new SlashCommandBuilder()
+.setName("mystats")
+.setDescription("View your linked player stats"),
+
+new SlashCommandBuilder()
+.setName("linkplayer")
+.setDescription("Link your Discord to a player")
+.addStringOption(option =>
+option
+.setName("player")
+.setDescription("Your player name")
+.setRequired(true)
+),
 
 
-  new SlashCommandBuilder()
+new SlashCommandBuilder()
 .setName("notifyunlinked")
 .setDescription("Show unlinked players"),
-  
-  new SlashCommandBuilder()
-    .setName("teamstats")
-    .setDescription("View a team stats card")
-    .addStringOption((option) =>
-      option
-        .setName("team")
-        .setDescription("Choose a team")
-        .setRequired(true)
-        .setAutocomplete(true),
-    ),
 
-  new SlashCommandBuilder()
-    .setName("standings")
-    .setDescription("View league standings"),
+new SlashCommandBuilder()
+.setName("teamstats")
+.setDescription("View a team stats card")
+.addStringOption((option) =>
+option
+.setName("team")
+.setDescription("Choose a team")
+.setRequired(true)
+.setAutocomplete(true),
+),
+
+new SlashCommandBuilder()
+.setName("standings")
+.setDescription("View league standings"),
 
 
-  new SlashCommandBuilder()
-    .setName("schedule")
-    .setDescription("View a team schedule"),
+new SlashCommandBuilder()
+.setName("schedule")
+.setDescription("View a team schedule"),
 
-  new SlashCommandBuilder()
-    .setName("statleaders")
-    .setDescription("View league stat leaders"),
+new SlashCommandBuilder()
+.setName("statleaders")
+.setDescription("View league stat leaders"),
 
-  new SlashCommandBuilder()
-    .setName("removegame")
-    .setDescription("Remove a game by ID")
-    .addStringOption(option =>
-      option
-        .setName("game")
-        .setDescription("Game ID")
-        .setRequired(true)
-    ),
-  
-  new SlashCommandBuilder()
-    .setName("gameresults")
-    .setDescription("Submit game result")
-    .addStringOption((option) =>
-      option
-        .setName("input")
-        .setDescription("Format: Leafs 3 - Canadiens 2")
-        .setRequired(true),
-    ),
+new SlashCommandBuilder()
+.setName("removegame")
+.setDescription("Remove a game by ID")
+.addStringOption(option =>
+option
+.setName("game")
+.setDescription("Game ID")
+.setRequired(true)
+),
+
+new SlashCommandBuilder()
+.setName("gameresults")
+.setDescription("Submit game result")
+.addStringOption((option) =>
+option
+.setName("input")
+.setDescription("Format: Leafs 3 - Canadiens 2")
+.setRequired(true),
+),
 ];
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
-  try {
-    await rest.put(
-      Routes.applicationGuildCommands(
-        process.env.CLIENT_ID,
-        process.env.GUILD_ID,
-      ),
-      { body: commands },
-    );
-    console.log("Commands registered");
-  } catch (err) {
-    console.error("Command register error:", err);
-  }
+try {
+await rest.put(
+Routes.applicationGuildCommands(
+process.env.CLIENT_ID,
+process.env.GUILD_ID,
+),
+{ body: commands },
+);
+console.log("Commands registered");
+} catch (err) {
+console.error("Command register error:", err);
+}
 })();
 
 client.once("ready", () => {
-  console.log(`Logged in as ${client.user.tag}`);
+console.log(`Logged in as ${client.user.tag}`);
 });
 
 
@@ -282,8 +286,8 @@ imageReplacements.TEAM_LOGO = TEAM_LOGOS[teamNameClean];
 
 console.log("REPLACEMENTS KEYS:", Object.keys(replacements));
 console.log("GP1 VALUE:", replacements["GP1"]);
-  console.log("FULL OBJECT:", replacements);
-  
+console.log("FULL OBJECT:", replacements);
+
 const image = await createImageFromTemplate(
 process.env.TEAMSTATS_TEMPLATE_ID,
 replacements,
@@ -465,7 +469,7 @@ await updateSheetValues("Player Stats!A3:I", Object.values(playerMap));
 if (Object.keys(goalieMap).length) {
 await updateSheetValues("Goalie Stats!A3:I", Object.values(goalieMap));
 }
-  
+
 if (filteredMaster.length) {
 await updateSheetValues("Master Stats!A2:M", filteredMaster);
 }
@@ -546,35 +550,35 @@ return interaction.editReply(`🗑️ Game ${gameId} fully removed.`);
 
 
 async function getTeams() {
-  const rows = await getSheetValues("Standings!K2:K50");
-  return rows.map((row) => row[0]).filter(Boolean);
+const rows = await getSheetValues("Standings!K2:K50");
+return rows.map((row) => row[0]).filter(Boolean);
 }
 
 async function getSheetValues(range) {
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: process.env.SHEET_ID,
-    range,
-  });
+const res = await sheets.spreadsheets.values.get({
+spreadsheetId: process.env.SHEET_ID,
+range,
+});
 
-  return res.data.values || [];
+return res.data.values || [];
 }
 
 async function appendSheetValues(range, values) {
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: process.env.SHEET_ID,
-    range,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values },
-  });
+await sheets.spreadsheets.values.append({
+spreadsheetId: process.env.SHEET_ID,
+range,
+valueInputOption: "USER_ENTERED",
+requestBody: { values },
+});
 }
 
 async function updateSheetValues(range, values) {
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: process.env.SHEET_ID,
-    range,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values },
-  });
+await sheets.spreadsheets.values.update({
+spreadsheetId: process.env.SHEET_ID,
+range,
+valueInputOption: "USER_ENTERED",
+requestBody: { values },
+});
 }
 
 
@@ -692,26 +696,26 @@ objectId: tempSlideId,
 
 
 function normalize(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
+return String(value || "")
+.trim()
+.toLowerCase()
+.replace(/\s+/g, " ");
 }
 
 function num(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
+const n = Number(value);
+return Number.isFinite(n) ? n : 0;
 }
 
 function formatSavePct(value) {
-  const n = num(value);
-  if (n === 0) return "0.000";
-  return n.toFixed(3).replace(/^0/, "");
+const n = num(value);
+if (n === 0) return "0.000";
+return n.toFixed(3).replace(/^0/, "");
 }
 
 function formatGAA(value) {
-  const n = num(value);
-  return n.toFixed(2);
+const n = num(value);
+return n.toFixed(2);
 }
 
 
@@ -728,8 +732,8 @@ ephemeral: true,
 
 return handleRemoveGame(interaction);
 }
-  
-  try {
+
+try {
 if (!interaction.isChatInputCommand()) return;
 
 if (interaction.commandName === "gameresults") {
@@ -752,14 +756,14 @@ return handleTeamStats(interaction);
 if (interaction.commandName === "schedule") {
 return handleSchedule(interaction);
 }
-    
+
 if (interaction.commandName === "linkplayer") {
 return handleLinkPlayer(interaction);
-}    
+}
 
 if (interaction.commandName === "notifyunlinked") {
 return handleNotifyUnlinked(interaction);
-}    
+}
 
 if (interaction.commandName === "removegame") {
 if (!isAdmin(interaction)) {
@@ -772,7 +776,7 @@ return handleRemoveGame(interaction);
 }
 
 if (interaction.commandName === "gameresults") {
-  return handleGameResults(interaction);
+return handleGameResults(interaction);
 }
 
 } catch (err) {
