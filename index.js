@@ -849,9 +849,16 @@ await interaction.reply("❌ Error occurred.");
 }
 });
 
-const { handleGameResults, handleLinkPlayer, handleNotifyUnlinked } = createGameResults({
+const createGameResults = require("./gameResults");
+
+const {
+handleGameResults,
+handleLinkPlayer,
+handleNotifyUnlinked,
+handleMyStats,
+handleTeamStats
+} = createGameResults({
 sheets,
-slides,
 getSheetValues,
 appendSheetValues,
 updateSheetValues,
@@ -862,5 +869,4 @@ STANDINGS_CHANNEL_ID,
 STAT_LEADERS_CHANNEL_ID,
 rebuildStandings
 });
-
 client.login(process.env.DISCORD_TOKEN);
