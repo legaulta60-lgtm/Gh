@@ -325,82 +325,115 @@ async function handleLinkPlayer(interaction) {
 try {
 await interaction.deferReply();
 
-const playerName = interaction.options.getString("player");
+const newName = interaction.options.getString("player");
 const linked = await getSheetValues("Linked Players!A2:C1000");
 
 // =========================
-// LINKED PLAYERS (NO DUPES)
+// FIND EXISTING USER
 // =========================
 const existingIndex = linked.findIndex(row =>
 String(row[0]) === String(interaction.user.id)
 );
 
+const oldName = existingIndex !== -1 ? linked[existingIndex][2] : null;
+
+// =========================
+// UPDATE OR CREATE LINK
+// =========================
 if (existingIndex !== -1) {
-// UPDATE EXISTING ROW
 const rowNumber = existingIndex + 2;
 
 await updateSheetValues(`Linked Players!A${rowNumber}:C${rowNumber}`, [[
 interaction.user.id,
 interaction.user.username,
-playerName
+newName
 ]]);
 
 } else {
-// CREATE NEW ROW
 await appendSheetValues("Linked Players!A:C", [[
 interaction.user.id,
 interaction.user.username,
-playerName
+newName
 ]]);
 }
 
 // =========================
-// PLAYER STATS ROW (0s)
+// IF NAME CHANGED → UPDATE STATS SHEETS
+// =========================
+if (oldName && normalize(oldName) !== normalize(newName)) {
+
+// PLAYER STATS UPDATE
+const playerStats = await getSheetValues("Player Stats!A3:I1000");
+
+const pIndex = playerStats.findIndex(r =>
+normalize(r[0]) === normalize(oldName)
+);
+
+if (pIndex !== -1) {
+const rowNumber = pIndex + 3;
+await updateSheetValues(`Player Stats!A${rowNumber}:A${rowNumber}`, [[newName]]);
+}
+
+// GOALIE STATS UPDATE
+const goalieStats = await getSheetValues("Goalie Stats!A3:I1000");
+
+const gIndex = goalieStats.findIndex(r =>
+normalize(r[0]) === normalize(oldName)
+);
+
+if (gIndex !== -1) {
+const rowNumber = gIndex + 3;
+await updateSheetValues(`Goalie Stats!A${rowNumber}:A${rowNumber}`, [[newName]]);
+}
+}
+
+// =========================
+// ENSURE PLAYER ROW EXISTS
 // =========================
 const playerStats = await getSheetValues("Player Stats!A3:I1000");
 
 const playerExists = playerStats.some(r =>
-normalize(r[0]) === normalize(playerName)
+normalize(r[0]) === normalize(newName)
 );
 
 if (!playerExists) {
 await appendSheetValues("Player Stats!A:I", [[
-playerName,
-"", // team
-0, // GP
-0, // G
-0, // A
-0, // PTS
-0, // BS
-0, // TA
-0 // INT
+newName,
+"",
+0,
+0,
+0,
+0,
+0,
+0,
+0
 ]]);
 }
 
 // =========================
-// GOALIE STATS ROW (0s)
+// ENSURE GOALIE ROW EXISTS
 // =========================
 const goalieStats = await getSheetValues("Goalie Stats!A3:I1000");
 
 const goalieExists = goalieStats.some(r =>
-normalize(r[0]) === normalize(playerName)
+normalize(r[0]) === normalize(newName)
 );
 
 if (!goalieExists) {
 await appendSheetValues("Goalie Stats!A:I", [[
-playerName,
-"", // team
-0, // GP
-0, // W
-0, // L
-0, // GA
-0, // SV
-0, // SA
-0 // SO
+newName,
+"",
+0,
+0,
+0,
+0,
+0,
+0,
+0
 ]]);
 }
 
-return interaction.editReply(`✅ Linked to ${playerName}`);
+return interaction.editReply(`✅ Linked to ${newName}`);
 
 } catch (err) {
 console.error(err);
