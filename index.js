@@ -792,8 +792,7 @@ const {
 handleGameResults,
 handleLinkPlayer,
 handleNotifyUnlinked,
-handleMyStats,  
-handleTeamStats
+handleMyStats
 } = createGameResults({
 sheets,
 getSheetValues,
