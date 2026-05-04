@@ -223,52 +223,74 @@ await postStatLeaders(interaction.client);
 
 return interaction.editReply("✅ Game recorded");
 }
+}
 
-// =========================
-// 🔁 REBUILD
-// =========================
+async function rebuildAllStats() {
+const master = await getSheetValues("Master Stats!A3:M1000");
+
+const players = {};
+const goalies = {};
+
+for (const r of master) {
+const name = r[1];
+const team = r[2];
+
 const isSkater = r[3] !== "" && r[3] !== null && r[3] !== undefined;
 const isGoalie = r[8] !== "" && r[8] !== null && r[8] !== undefined;
 
-// SKATER ONLY
+// SKATER
 if (isSkater && !isGoalie) {
-if (!playerMap[name]) {
-playerMap[name] = [name, team, 0,0,0,0,0,0,0];
+if (!players[name]) {
+players[name] = [name, team, 0,0,0,0,0,0,0];
 }
 
-playerMap[name][2] += 1;
-playerMap[name][3] += Number(r[3]) || 0;
-playerMap[name][4] += Number(r[4]) || 0;
-playerMap[name][5] += (Number(r[3]) + Number(r[4])) || 0;
-playerMap[name][6] += Number(r[5]) || 0;
-playerMap[name][7] += Number(r[6]) || 0;
-playerMap[name][8] += Number(r[7]) || 0;
+players[name][2] += 1;
+players[name][3] += Number(r[3]) || 0;
+players[name][4] += Number(r[4]) || 0;
+players[name][5] += (Number(r[3]) + Number(r[4])) || 0;
+players[name][6] += Number(r[5]) || 0;
+players[name][7] += Number(r[6]) || 0;
+players[name][8] += Number(r[7]) || 0;
 }
 
-// GOALIE ONLY
+// GOALIE
 if (isGoalie && !isSkater) {
-if (!goalieMap[name]) {
-goalieMap[name] = [name, team, 0,0,0,0,0,0,0];
+if (!goalies[name]) {
+goalies[name] = [name, team, 0,0,0,0,0,0,0];
 }
 
 const saves = Number(r[8]) || 0;
 const shots = Number(r[9]) || 0;
 const ga = shots - saves;
 
-goalieMap[name][2] += 1;
-goalieMap[name][3] += Number(r[10]) || 0;
-goalieMap[name][4] += Number(r[11]) || 0;
-goalieMap[name][5] += ga;
-goalieMap[name][6] += saves;
-goalieMap[name][7] += shots;
-goalieMap[name][8] += Number(r[12]) || 0;
+goalies[name][2] += 1;
+goalies[name][3] += Number(r[10]) || 0;
+goalies[name][4] += Number(r[11]) || 0;
+goalies[name][5] += ga;
+goalies[name][6] += saves;
+goalies[name][7] += shots;
+goalies[name][8] += Number(r[12]) || 0;
+}
 }
 
-await sheets.spreadsheets.values.clear({spreadsheetId:process.env.SHEET_ID,range:"Player Stats!A3:I"});
-await sheets.spreadsheets.values.clear({spreadsheetId:process.env.SHEET_ID,range:"Goalie Stats!A3:I"});
+// 🔥 THESE MUST BE AFTER THE LOOP
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Player Stats!A3:I"
+});
 
+await sheets.spreadsheets.values.clear({
+spreadsheetId: process.env.SHEET_ID,
+range: "Goalie Stats!A3:I"
+});
+
+if (Object.values(players).length) {
 await updateSheetValues("Player Stats!A3:I", Object.values(players));
+}
+
+if (Object.values(goalies).length) {
 await updateSheetValues("Goalie Stats!A3:I", Object.values(goalies));
+}
 }
 
 return { handleGameResults };
