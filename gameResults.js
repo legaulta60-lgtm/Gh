@@ -223,7 +223,7 @@ await postStatLeaders(interaction.client);
 
 return interaction.editReply("✅ Game recorded");
 }
-}
+
 
 async function rebuildAllStats() {
 const master = await getSheetValues("Master Stats!A3:M1000");
@@ -291,7 +291,7 @@ await updateSheetValues("Player Stats!A3:I", Object.values(players));
 if (Object.values(goalies).length) {
 await updateSheetValues("Goalie Stats!A3:I", Object.values(goalies));
 }
-
+}
 
 return { handleGameResults };
 };
