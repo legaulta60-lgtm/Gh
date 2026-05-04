@@ -548,7 +548,6 @@ return {
 handleGameResults,
 handleLinkPlayer,
 handleNotifyUnlinked,
-handleMyStats,
-handleTeamStats
+handleMyStats
 };
 };
