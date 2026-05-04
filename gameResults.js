@@ -484,13 +484,17 @@ return interaction.editReply("❌ Error fetching unlinked players.");
 }  
 
 async function handleMyStats(interaction) {
+try {
 await interaction.deferReply();
 
 const userId = interaction.user.id;
 
-// 🔗 Get linked player
+// =========================
+// 🔗 GET LINKED PLAYER
+// =========================
 const linkedRows = await getSheetValues("Linked Players!A:C");
-const link = linkedRows.find(row => row[0] === userId);
+
+const link = linkedRows.find(row => String(row[0]) === String(userId));
 
 if (!link) {
 return interaction.editReply("❌ You are not linked. Use /linkplayer first.");
@@ -498,50 +502,104 @@ return interaction.editReply("❌ You are not linked. Use /linkplayer first.");
 
 const playerName = link[2];
 
-// 📊 Get stats
+// =========================
+// 📊 GET STATS
+// =========================
 const playerRows = await getSheetValues("Player Stats!A3:I");
 const goalieRows = await getSheetValues("Goalie Stats!A3:I");
 
 const skater = playerRows.find(r => r[0] === playerName);
 const goalie = goalieRows.find(r => r[0] === playerName);
 
-// 🧠 Build template replacements
-const rep = {};
-const img = {};
+// =========================
+// 🏒 GET TEAM (IMPORTANT FIX)
+// =========================
+const team = skater?.[1] || goalie?.[1] || "";
 
-// NAME
-rep.NAME = playerName;
+// =========================
+// 🧮 CALCULATIONS
+// =========================
+const gp = Number(skater?.[2]) || 0;
+const g = Number(skater?.[3]) || 0;
+const a = Number(skater?.[4]) || 0;
+const pts = Number(skater?.[5]) || 0;
 
-// 🏒 SKATER
-rep.GP = skater?.[2] || "0";
-rep.G = skater?.[3] || "0";
-rep.A = skater?.[4] || "0";
-rep.PTS = skater?.[5] || "0";
-rep.BS = skater?.[6] || "0";
-rep.TA = skater?.[7] || "0";
-rep.INT = skater?.[8] || "0";
+const bs = Number(skater?.[6]) || 0;
+const ta = Number(skater?.[7]) || 0;
+const int = Number(skater?.[8]) || 0;
 
-// 🥅 GOALIE
+const ppg = gp > 0 ? (pts / gp).toFixed(2) : "0.00";
+
+const ggp = Number(goalie?.[2]) || 0;
+const w = Number(goalie?.[3]) || 0;
+const l = Number(goalie?.[4]) || 0;
+
 const saves = Number(goalie?.[6]) || 0;
 const shots = Number(goalie?.[7]) || 0;
 
-rep.SV = shots > 0 ? (saves / shots).toFixed(3) : "0.000";
-rep.GAA = goalie?.[5] || "0";
-rep.SO = goalie?.[8] || "0";
+const sv = shots > 0 ? (saves / shots).toFixed(3) : "0.000";
+const gaa = Number(goalie?.[5]) || 0;
+const so = Number(goalie?.[8]) || 0;
 
-// 🖼️ Create image
-const image = await createImageFromTemplate(
-process.env.MYSTATS_TEMPLATE_ID, // 👈 make sure this exists
-rep,
-"mystats.png",
-img
+// =========================
+// 🧾 TEMPLATE VALUES (MATCHES YOUR IMAGE)
+// =========================
+const rep = {
+PLAYER: playerName,
+TEAM: team,
+
+GP: gp,
+G: g,
+A: a,
+PTS: pts,
+
+BS: bs,
+TA: ta,
+INT: int,
+
+PPG: ppg,
+
+GGP: ggp,
+W: w,
+L: l,
+
+SV: sv,
+GAA: gaa,
+SO: so
+};
+
+// =========================
+// 🖼️ LOGO FIX
+// =========================
+const imageReplacements = {};
+
+const logoKey = Object.keys(TEAM_LOGOS).find(
+key => key.toLowerCase().trim() === team.toLowerCase().trim()
 );
 
-// 📤 Send image
+if (logoKey) {
+imageReplacements.TEAM_LOGO = TEAM_LOGOS[logoKey];
+}
+
+// =========================
+// 🖼️ GENERATE IMAGE
+// =========================
+const image = await createImageFromTemplate(
+process.env.MYSTATS_TEMPLATE_ID,
+rep,
+"mystats.png",
+imageReplacements
+);
+
 return interaction.editReply({
 files: [{ attachment: image, name: "mystats.png" }]
 });
-}  
+
+} catch (err) {
+console.error(err);
+return interaction.editReply("❌ Error loading stats.");
+}
+} 
   
 
 return {
