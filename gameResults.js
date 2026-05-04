@@ -291,6 +291,7 @@ await updateSheetValues("Player Stats!A3:I", Object.values(players));
 if (Object.values(goalies).length) {
 await updateSheetValues("Goalie Stats!A3:I", Object.values(goalies));
 }
-}
+
 
 return { handleGameResults };
+};
