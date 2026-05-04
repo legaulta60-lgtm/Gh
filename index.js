@@ -2,8 +2,6 @@ const GAME_RESULTS_CHANNEL_ID="1498059946116382731";
 const STANDINGS_CHANNEL_ID="1498060011589472396";
 const STAT_LEADERS_CHANNEL_ID="1498060011589472396";
 
-const createGameResults = require("./gameResults");
-
 const {
   Client,
   GatewayIntentBits,
