@@ -18,6 +18,12 @@ function normalize(str) {
 return String(str || "").toLowerCase().trim();
 }
 
+function isPlayerLinked(name, linked) {
+return linked.some(row =>
+row[2] && normalize(row[2]) === normalize(name)
+);
+}
+
 // =========================
 // 🏆 POST STANDINGS
 // =========================
@@ -155,6 +161,9 @@ await interaction.deferReply();
 const input = interaction.options.getString("input");
 const lines = input.split("\n").map(l=>l.trim());
 
+const linked = await getSheetValues("Linked Players!A2:C1000");
+const unlinked = await getSheetValues("Unlinked Players!A2:C1000");
+
 let gameId = Date.now();
 let homeTeam="", awayTeam="";
 let homeScore=0, awayScore=0;
@@ -188,6 +197,15 @@ const [name, raw] = line.split(":").map(s=>s.trim());
 
 // SKATER
 if (mode==="SKATERS") {
+const alreadyUnlinked = unlinked.some(r =>
+normalize(r[1]) === normalize(name)
+);
+
+if (!isPlayerLinked(name, linked) && !alreadyUnlinked) {
+await appendSheetValues("Unlinked Players!A:C", [
+[gameId, name, currentTeam]
+]);
+}
 const g=+(raw.match(/(\d+)G/)||[0,0])[1];
 const a=+(raw.match(/(\d+)A/)||[0,0])[1];
 const ta=+(raw.match(/(\d+)TA/)||[0,0])[1];
@@ -199,6 +217,16 @@ masterRows.push([gameId,name,currentTeam,g,a,bs,ta,int,null,null,null,null,null]
 
 // GOALIE
 if (mode==="GOALIES") {
+
+const alreadyUnlinked = unlinked.some(r =>
+normalize(r[1]) === normalize(name)
+);
+
+if (!isPlayerLinked(name, linked) && !alreadyUnlinked) {
+await appendSheetValues("Unlinked Players!A:C", [
+[gameId, name, currentTeam]
+]);
+}  
 if (!/^\d+\/\d+/.test(raw)) continue;
 
 const [saves,shots] = raw.match(/(\d+)\/(\d+)/).slice(1).map(Number);
