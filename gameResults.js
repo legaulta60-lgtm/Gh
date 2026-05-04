@@ -322,83 +322,42 @@ await updateSheetValues("Goalie Stats!A3:I", Object.values(goalies));
 }
 
 async function handleLinkPlayer(interaction) {
+try {
 await interaction.deferReply();
 
-const discordId = interaction.user.id;
-const discordName = interaction.user.username;
 const playerName = interaction.options.getString("player");
-
-if (!playerName) {
-return interaction.editReply("❌ You must enter a player name.");
-}
-
-// =========================
-// ADD TO LINKED PLAYERS
-// =========================
-const linked = await getSheetValues("Linked Players!A2:C");
-
-const alreadyLinked = linked.some(r =>
-normalize(r[2]) === normalize(playerName)
-);
-
-if (!alreadyLinked) {
 const linked = await getSheetValues("Linked Players!A2:C1000");
 
-let foundIndex = -1;
+// check if THIS DISCORD USER already exists
+const existingIndex = linked.findIndex(row =>
+String(row[0]) === String(interaction.user.id)
+);
 
-for (let i = 0; i < linked.length; i++) {
-if (normalize(linked[i][2]) === normalize(playerName)) {
-foundIndex = i;
-break;
-}
-}
-
-if (foundIndex !== -1) {
+if (existingIndex !== -1) {
 // UPDATE EXISTING ROW
-const rowNumber = foundIndex + 2; // because A2 starts at row 2
+const rowNumber = existingIndex + 2;
 
-await updateSheetValues(`Linked Players!A${rowNumber}:C${rowNumber}`, [
-[discordId, discordName || "", playerName]
-]);
+await updateSheetValues(`Linked Players!A${rowNumber}:C${rowNumber}`, [[
+interaction.user.id,
+interaction.user.username,
+playerName
+]]);
+
 } else {
-// ADD NEW ROW
-await appendSheetValues("Linked Players!A:C", [
-[discordId, discordName || "", playerName]
-]);
-}
-}
-
-// =========================
-// CREATE PLAYER ROW (IF NOT EXISTS)
-// =========================
-const players = await getSheetValues("Player Stats!A3:A1000");
-
-const existsPlayer = players.some(r =>
-normalize(r[0]) === normalize(playerName)
-);
-
-if (!existsPlayer) {
-await appendSheetValues("Player Stats!A3:I", [
-[playerName, "", 0, 0, 0, 0, 0, 0, 0]
-]);
+// CREATE NEW ROW
+await appendSheetValues("Linked Players!A:C", [[
+interaction.user.id,
+interaction.user.username,
+playerName
+]]);
 }
 
-// =========================
-// CREATE GOALIE ROW (IF NOT EXISTS)
-// =========================
-const goalies = await getSheetValues("Goalie Stats!A3:A1000");
+return interaction.editReply(`✅ Linked to ${playerName}`);
 
-const existsGoalie = goalies.some(r =>
-normalize(r[0]) === normalize(playerName)
-);
-
-if (!existsGoalie) {
-await appendSheetValues("Goalie Stats!A3:I", [
-[playerName, "", 0, 0, 0, 0, 0, 0, 0]
-]);
+} catch (err) {
+console.error(err);
+return interaction.editReply("❌ Error linking player.");
 }
-
-return interaction.editReply(`✅ Linked to **${playerName}**`);
 }
   
 
