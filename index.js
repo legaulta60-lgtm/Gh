@@ -881,7 +881,7 @@ await interaction.reply("❌ Error occurred.");
 }
 });
 
-const { handleGameResults, handleLinkPlayer } = createGameResults({
+const { handleGameResults, handleLinkPlayer, handleNotifyUnlinked } = createGameResults({
 sheets,
 slides,
 getSheetValues,
