@@ -328,7 +328,9 @@ await interaction.deferReply();
 const playerName = interaction.options.getString("player");
 const linked = await getSheetValues("Linked Players!A2:C1000");
 
-// check if THIS DISCORD USER already exists
+// =========================
+// LINKED PLAYERS (NO DUPES)
+// =========================
 const existingIndex = linked.findIndex(row =>
 String(row[0]) === String(interaction.user.id)
 );
@@ -349,6 +351,52 @@ await appendSheetValues("Linked Players!A:C", [[
 interaction.user.id,
 interaction.user.username,
 playerName
+]]);
+}
+
+// =========================
+// PLAYER STATS ROW (0s)
+// =========================
+const playerStats = await getSheetValues("Player Stats!A3:I1000");
+
+const playerExists = playerStats.some(r =>
+normalize(r[0]) === normalize(playerName)
+);
+
+if (!playerExists) {
+await appendSheetValues("Player Stats!A:I", [[
+playerName,
+"", // team
+0, // GP
+0, // G
+0, // A
+0, // PTS
+0, // BS
+0, // TA
+0 // INT
+]]);
+}
+
+// =========================
+// GOALIE STATS ROW (0s)
+// =========================
+const goalieStats = await getSheetValues("Goalie Stats!A3:I1000");
+
+const goalieExists = goalieStats.some(r =>
+normalize(r[0]) === normalize(playerName)
+);
+
+if (!goalieExists) {
+await appendSheetValues("Goalie Stats!A:I", [[
+playerName,
+"", // team
+0, // GP
+0, // W
+0, // L
+0, // GA
+0, // SV
+0, // SA
+0 // SO
 ]]);
 }
 
