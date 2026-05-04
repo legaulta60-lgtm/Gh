@@ -54,16 +54,7 @@ const sheets = google.sheets({ version: "v4", auth });
 const slides = google.slides({ version: "v1", auth });
 
 const commands = [
-  new SlashCommandBuilder()
-    .setName("linkplayer")
-    .setDescription("Link your Discord to your EA/player name")
-    .addStringOption((option) =>
-      option
-        .setName("player")
-        .setDescription("Your EA/player name")
-        .setRequired(true),
-    ),
-
+  
   new SlashCommandBuilder()
     .setName("mystats")
     .setDescription("View your linked player stats"),
@@ -876,7 +867,7 @@ await interaction.reply("❌ Error occurred.");
 }
 });
 
-const { handleGameResults } = createGameResults({
+const { handleGameResults, handleLinkPlayer } = createGameResults({
 sheets,
 slides,
 getSheetValues,
