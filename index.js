@@ -705,7 +705,14 @@ return n.toFixed(2);
 
 
 client.on("interactionCreate", async (interaction) => {
+if (interaction.isStringSelectMenu()) {
 
+if (interaction.customId === "schedule_team_select") {
+return handleScheduleTeamSelect(interaction);
+}
+
+}
+  
 if (interaction.commandName === "removegame") {
 if (!isAdmin(interaction)) {
 return interaction.reply({
