@@ -15,10 +15,6 @@ const { google } = require("googleapis");
 
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
-const {
-  handleSchedule,
-  handleScheduleTeamSelect,
-} = require("./scheduleCommand");
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
