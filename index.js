@@ -881,4 +881,11 @@ STANDINGS_CHANNEL_ID,
 STAT_LEADERS_CHANNEL_ID,
 rebuildStandings
 });
+
+const createSchedule = require("./schedule");
+
+const { handleSchedule } = createSchedule({
+getSheetValues,
+createImageFromTemplate
+});
 client.login(process.env.DISCORD_TOKEN);
