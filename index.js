@@ -54,20 +54,20 @@ const sheets = google.sheets({ version: "v4", auth });
 const slides = google.slides({ version: "v1", auth });
 
 const commands = [
-
-  new SlashCommandBuilder()
-.setName("linkplayer")
-.setDescription("Link your Discord to a player")
-.addStringOption(option =>
-option
-.setName("player")
-.setDescription("Your player name")
-.setRequired(true)
-)
   
   new SlashCommandBuilder()
     .setName("mystats")
     .setDescription("View your linked player stats"),
+  
+  new SlashCommandBuilder()
+    .setName("linkplayer")
+    .setDescription("Link your Discord to a player")
+    .addStringOption(option =>
+      option
+        .setName("player")
+        .setDescription("Your player name")
+        .setRequired(true)
+    ),
 
   new SlashCommandBuilder()
     .setName("teamstats")
