@@ -816,6 +816,18 @@ ephemeral: true,
 }
 }
 
+if (interaction.commandName === "mystats") {
+return handleMyStats(interaction);
+}
+
+if (interaction.commandName === "teamstats") {
+return handleTeamStats(interaction);
+}
+
+if (interaction.commandName === "schedule") {
+return handleSchedule(interaction);
+}
+    
 if (interaction.commandName === "linkplayer") {
 return handleLinkPlayer(interaction);
 }    
