@@ -204,36 +204,67 @@ const input = interaction.options.getString("input");
 const lines = input.split("\n").map(l=>l.trim());
 const recapNote = interaction.options.getString("recap") || "";
 
-const linked = await getSheetValues("Linked Players!A2:C1000");
+// 🔥 UPDATED (A:D)
+const linked = await getSheetValues("Linked Players!A2:D1000");
 const unlinked = await getSheetValues("Unlinked Players!A2:C1000");
 
 let gameId = Date.now();
 let homeTeam="", awayTeam="";
 let homeScore=0, awayScore=0;
 
-// 🟢 NEW: OT DETECTION
 let resultType = "REG";
 
 let mode=null, currentTeam=null;
 
 const masterRows = [];
 
-for (const line of lines) {
+// =========================
+// 🔥 TEAM SYNC FUNCTION
+// =========================
+async function syncPlayerTeam(name, team) {
+
+const linkedData = await getSheetValues("Linked Players!A2:D1000");
+const playerData = await getSheetValues("Player Stats!A3:I1000");
+const goalieData = await getSheetValues("Goalie Stats!A3:I1000");
+
+// LINKED PLAYERS
+for (let i = 0; i < linkedData.length; i++) {
+if (normalize(linkedData[i][2]) === normalize(name)) {
+linkedData[i][3] = team;
+}
+}
+
+// PLAYER STATS
+for (let i = 0; i < playerData.length; i++) {
+if (normalize(playerData[i][0]) === normalize(name)) {
+playerData[i][1] = team;
+}
+}
+
+// GOALIE STATS
+for (let i = 0; i < goalieData.length; i++) {
+if (normalize(goalieData[i][0]) === normalize(name)) {
+goalieData[i][1] = team;
+}
+}
+
+await updateSheetValues("Linked Players!A2:D1000", linkedData);
+await updateSheetValues("Player Stats!A3:I1000", playerData);
+await updateSheetValues("Goalie Stats!A3:I1000", goalieData);
+}
 
 // =========================
-// 🆔 GAME ID
+// 🔁 PARSE INPUT
 // =========================
+for (const line of lines) {
+
 if (line.toLowerCase().startsWith("game:")) {
 gameId = line.split(":")[1].trim();
 }
 
-// =========================
-// 🏒 SCORE + OT DETECTION
-// =========================
 if (line.toLowerCase().startsWith("score:")) {
 const clean = line.replace(/score:/i,"").trim();
 
-// detect OT
 if (clean.toLowerCase().includes("ot")) {
 resultType = "OT";
 }
@@ -245,9 +276,6 @@ awayTeam=m[3]; awayScore=+m[4];
 }
 }
 
-// =========================
-// MODE SWITCH
-// =========================
 if (line==="SKATERS") { mode="SKATERS"; continue; }
 if (line==="GOALIES") { mode="GOALIES"; continue; }
 
@@ -260,6 +288,8 @@ const [name, raw] = line.split(":").map(s=>s.trim());
 // 🧍 SKATER
 // =========================
 if (mode==="SKATERS") {
+
+await syncPlayerTeam(name, currentTeam); // 🔥 NEW
 
 const alreadyUnlinked = unlinked.some(r =>
 normalize(r[1]) === normalize(name)
@@ -284,6 +314,8 @@ masterRows.push([gameId,name,currentTeam,g,a,bs,ta,int,null,null,null,null,null]
 // 🧤 GOALIE
 // =========================
 if (mode==="GOALIES") {
+
+await syncPlayerTeam(name, currentTeam); // 🔥 NEW
 
 const alreadyUnlinked = unlinked.some(r =>
 normalize(r[1]) === normalize(name)
@@ -319,9 +351,7 @@ ga===0?1:0
 // =========================
 await appendSheetValues("Master Stats!A3:M", masterRows);
 
-// 🔥 UPDATED (NOW INCLUDES RESULT TYPE)
-await appendSheetValues("Game Results!A2:G", [
-[
+await appendSheetValues("Game Results!A2:G", [[
 gameId,
 homeTeam,
 awayTeam,
@@ -329,8 +359,7 @@ homeScore,
 awayScore,
 homeScore>awayScore?homeTeam:awayTeam,
 resultType
-]
-]);
+]]);
 
 await rebuildAllStats();
 await rebuildStandings();
@@ -345,13 +374,8 @@ ${recapNote}`;
 
 const channel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
 
-await channel.send({
-content: recap.trim()
-});
+await channel.send({ content: recap.trim() });
 
-// =========================
-// 📊 UPDATE POSTS
-// =========================
 await postStandings(interaction.client);
 await postStatLeaders(interaction.client);
 
@@ -595,9 +619,9 @@ await interaction.deferReply();
 const userId = interaction.user.id;
 
 // =========================
-// 🔗 GET LINKED PLAYER
+// 🔗 GET LINKED PLAYER (NOW A:D)
 // =========================
-const linkedRows = await getSheetValues("Linked Players!A:C");
+const linkedRows = await getSheetValues("Linked Players!A2:D1000");
 
 const link = linkedRows.find(row => String(row[0]) === String(userId));
 
@@ -617,9 +641,9 @@ const skater = playerRows.find(r => r[0] === playerName);
 const goalie = goalieRows.find(r => r[0] === playerName);
 
 // =========================
-// 🏒 GET TEAM (IMPORTANT FIX)
+// 🏒 TEAM (FIXED - SOURCE OF TRUTH)
 // =========================
-const team = skater?.[1] || goalie?.[1] || "";
+const team = (link?.[3] || skater?.[1] || goalie?.[1] || "").trim();
 
 // =========================
 // 🧮 CALCULATIONS
@@ -647,7 +671,7 @@ const gaa = Number(goalie?.[5]) || 0;
 const so = Number(goalie?.[8]) || 0;
 
 // =========================
-// 🧾 TEMPLATE VALUES (MATCHES YOUR IMAGE)
+// 🧾 TEMPLATE VALUES
 // =========================
 const rep = {
 PLAYER: playerName,
@@ -674,24 +698,18 @@ SO: so
 };
 
 // =========================
-// 🖼️ LOGO FIX
-// =========================
-// =========================
 // 🖼️ LOGO FIX (BULLETPROOF)
 // =========================
 const imageReplacements = {};
 
-// normalize helper (safe)
 function norm(v) {
 return String(v || "").toLowerCase().trim();
 }
 
-// find matching key safely
 const logoKey = Object.keys(TEAM_LOGOS).find(
 key => norm(key) === norm(team)
 );
 
-// fallback if exact match fails
 const fallbackKey = Object.keys(TEAM_LOGOS).find(
 key => norm(key).includes(norm(team)) || norm(team).includes(norm(key))
 );
@@ -703,7 +721,7 @@ imageReplacements.TEAM_LOGO = TEAM_LOGOS[finalKey];
 } else {
 console.log("❌ LOGO NOT FOUND FOR TEAM:", team);
 }
-  
+
 // =========================
 // 🖼️ GENERATE IMAGE
 // =========================
@@ -722,8 +740,7 @@ files: [{ attachment: image, name: "mystats.png" }]
 console.error(err);
 return interaction.editReply("❌ Error loading stats.");
 }
-} 
-  
+}
 
 return {
 handleGameResults,
