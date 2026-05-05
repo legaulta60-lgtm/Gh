@@ -202,6 +202,7 @@ await interaction.deferReply();
 
 const input = interaction.options.getString("input");
 const lines = input.split("\n").map(l=>l.trim());
+const recapNote = interaction.options.getString("recap") || "";
 
 const linked = await getSheetValues("Linked Players!A2:C1000");
 const unlinked = await getSheetValues("Unlinked Players!A2:C1000");
