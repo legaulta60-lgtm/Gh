@@ -676,16 +676,34 @@ SO: so
 // =========================
 // 🖼️ LOGO FIX
 // =========================
+// =========================
+// 🖼️ LOGO FIX (BULLETPROOF)
+// =========================
 const imageReplacements = {};
 
-const logoKey = Object.keys(TEAM_LOGOS).find(
-key => key.toLowerCase().trim() === team.toLowerCase().trim()
-);
-
-if (logoKey) {
-imageReplacements.TEAM_LOGO = TEAM_LOGOS[logoKey];
+// normalize helper (safe)
+function norm(v) {
+return String(v || "").toLowerCase().trim();
 }
 
+// find matching key safely
+const logoKey = Object.keys(TEAM_LOGOS).find(
+key => norm(key) === norm(team)
+);
+
+// fallback if exact match fails
+const fallbackKey = Object.keys(TEAM_LOGOS).find(
+key => norm(key).includes(norm(team)) || norm(team).includes(norm(key))
+);
+
+const finalKey = logoKey || fallbackKey;
+
+if (finalKey && TEAM_LOGOS[finalKey]) {
+imageReplacements.TEAM_LOGO = TEAM_LOGOS[finalKey];
+} else {
+console.log("❌ LOGO NOT FOUND FOR TEAM:", team);
+}
+  
 // =========================
 // 🖼️ GENERATE IMAGE
 // =========================
