@@ -72,14 +72,7 @@ new SlashCommandBuilder()
 
 new SlashCommandBuilder()
 .setName("teamstats")
-.setDescription("View a team stats card")
-.addStringOption((option) =>
-option
-.setName("team")
-.setDescription("Choose a team")
-.setRequired(true)
-.setAutocomplete(true),
-),
+.setDescription("View a team stats card"),
 
 new SlashCommandBuilder()
 .setName("standings")
@@ -140,24 +133,49 @@ console.log(`Logged in as ${client.user.tag}`);
 
 async function handleTeamStats(interaction) {
 try {
+
 await interaction.deferReply();
 
-const teamInput = interaction.options.getString("team");
+// =========================
+// 🔗 GET LINKED PLAYER
+// =========================
+const linked = await getSheetValues("Linked Players!A2:C1000");
+
+const link = linked.find(row => row[0] === interaction.user.id);
+
+if (!link) {
+return interaction.editReply("❌ You are not linked. Use /linkplayer first.");
+}
+
+const playerName = link[2];
 
 // =========================
-// 📊 GET TEAM FROM STANDINGS
+// 📊 FIND PLAYER TEAM
+// =========================
+const players = await getSheetValues("Player Stats!A3:I");
+
+const playerRow = players.find(r =>
+normalize(r[0]) === normalize(playerName)
+);
+
+if (!playerRow) {
+return interaction.editReply("❌ Player not found in stats.");
+}
+
+const team = playerRow[1];
+
+// =========================
+// 📊 GET TEAM STATS
 // =========================
 const standings = await getSheetValues("Standings!K2:S50");
 
 const teamRow = standings.find(
-row => normalize(row[0]) === normalize(teamInput)
+row => normalize(row[0]) === normalize(team)
 );
 
 if (!teamRow) {
-return interaction.editReply("❌ Team not found.");
+return interaction.editReply("❌ Team not found in standings.");
 }
-
-const team = teamRow[0];
 
 const gp = Number(teamRow[1]) || 0;
 const w = Number(teamRow[2]) || 0;
@@ -173,50 +191,35 @@ const DIFF_POS = diff >= 0 ? `+${diff}` : "";
 const DIFF_NEG = diff < 0 ? `${diff}` : "";
 
 // =========================
-// 📊 GET PLAYERS
+// 🔥 TOP PLAYERS
 // =========================
-const playerRows = await getSheetValues("Player Stats!A3:I");
-
-const teamPlayers = playerRows
+const teamPlayers = players
 .filter(r => normalize(r[1]) === normalize(team))
 .sort((a, b) => (Number(b[5]) || 0) - (Number(a[5]) || 0));
 
 const top1 = teamPlayers[0];
 const top2 = teamPlayers[1];
 
-// =========================
-// 🧍 FORMAT FORWARDS
-// =========================
 function formatForward(p) {
 if (!p) return "N/A";
 
-const name = p[0];
-const gp = Number(p[2]) || 0;
-const g = Number(p[3]) || 0;
-const a = Number(p[4]) || 0;
-const pts = Number(p[5]) || 0;
-
-return `${name}\n${gp} GP | ${g}G ${a}A ${pts}P`;
+return `${p[0]}\n${p[2]} GP | ${p[3]}G ${p[4]}A ${p[5]}P`;
 }
 
 // =========================
-// 🥅 GET GOALIE
+// 🧤 GOALIE
 // =========================
-const goalieRows = await getSheetValues("Goalie Stats!A3:I");
+const goalies = await getSheetValues("Goalie Stats!A3:I");
 
-const teamGoalies = goalieRows
+const teamGoalies = goalies
 .filter(r => normalize(r[1]) === normalize(team))
 .sort((a, b) => (Number(b[2]) || 0) - (Number(a[2]) || 0));
 
 const goalie = teamGoalies[0];
 
-// =========================
-// 🧤 FORMAT GOALIE
-// =========================
 function formatGoalie(g) {
 if (!g) return "N/A";
 
-const name = g[0];
 const gp = Number(g[2]) || 0;
 const w = Number(g[3]) || 0;
 
@@ -231,11 +234,11 @@ const gaa = gp > 0
 ? ((shots - saves) / gp).toFixed(2)
 : "0.00";
 
-return `${name}\n${gp} GP | ${w}W | ${sv} SV% | ${gaa} GAA`;
+return `${g[0]}\n${gp} GP | ${w}W | ${sv} SV% | ${gaa} GAA`;
 }
 
 // =========================
-// 🧾 TEMPLATE VALUES
+// 🧾 TEMPLATE DATA
 // =========================
 const rep = {
 TEAM: team,
@@ -258,16 +261,16 @@ GOALIE1: formatGoalie(goalie)
 };
 
 // =========================
-// 🖼️ LOGO FIX
+// 🖼️ LOGO
 // =========================
-const imageReplacements = {};
+const img = {};
 
 const logoKey = Object.keys(TEAM_LOGOS).find(
 key => normalize(key) === normalize(team)
 );
 
 if (logoKey) {
-imageReplacements.TEAM_LOGO = TEAM_LOGOS[logoKey];
+img.TEAM_LOGO = TEAM_LOGOS[logoKey];
 }
 
 // =========================
@@ -277,11 +280,11 @@ const image = await createImageFromTemplate(
 process.env.TEAMSTATS_TEMPLATE_ID,
 rep,
 "teamstats.png",
-imageReplacements
+img
 );
 
 return interaction.editReply({
-content: `**${team} Team Stats**`,
+content: `📊 ${team} Team Stats`,
 files: [{ attachment: image, name: "teamstats.png" }]
 });
 
