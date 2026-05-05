@@ -880,6 +880,10 @@ ephemeral: true,
 return handleGameResults(interaction);
 }
 
+if (interaction.commandName === "statleaders") {
+  return handleStatLeaders(interaction);
+}  
+
 if (interaction.commandName === "mystats") {
 return handleMyStats(interaction);
 }
@@ -914,7 +918,8 @@ const {
 handleGameResults,
 handleLinkPlayer,
 handleNotifyUnlinked,
-handleMyStats
+handleMyStats,
+handleStatLeaders
 } = createGameResults({
 sheets,
 getSheetValues,
