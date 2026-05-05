@@ -10,7 +10,8 @@ Routes,
 SlashCommandBuilder,
 AttachmentBuilder,
 ActionRowBuilder,
-ButtonBuilder
+ButtonBuilder,
+ButtonStyle
 } = require("discord.js");
 
 const { google } = require("googleapis");
@@ -568,7 +569,6 @@ requestBody: { values },
 }
 
 
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
 async function handleScheduleSystem(interaction) {
 try {
