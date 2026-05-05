@@ -575,7 +575,6 @@ requestBody: { values },
 }
 
 
-
 async function handleScheduleSystem(interaction) {
 try {
 
@@ -589,9 +588,9 @@ await interaction.deferReply({ ephemeral: true });
 const userId = interaction.user.id;
 
 // =========================
-// 🔗 GET LINKED PLAYER
+// 🔗 GET LINKED PLAYER (A:D)
 // =========================
-const linked = await getSheetValues("Linked Players!A2:C1000");
+const linked = await getSheetValues("Linked Players!A2:D1000");
 
 const link = linked.find(row => String(row[0]) === String(userId));
 
@@ -600,37 +599,29 @@ return interaction.editReply("❌ You are not linked. Use /linkplayer first.");
 }
 
 const playerName = link[2];
+const teamRaw = link[3];
 
 // =========================
-// 📊 FIND TEAM
+// 🟢 TEAM FROM LINKED (COLUMN D)
 // =========================
-const players = await getSheetValues("Player Stats!A3:I1000");
-
-const playerRow = players.find(r =>
-String(r[0]).toLowerCase().trim() === playerName.toLowerCase().trim()
-);
-
-if (!playerRow) {
-return interaction.editReply("❌ Player not found in stats.");
+if (!teamRaw) {
+return interaction.editReply("❌ No team set. Contact admin.");
 }
 
-const team = playerRow[1];
+const team = String(teamRaw).trim();
 
 // =========================
 // 📅 GET SCHEDULE
 // =========================
 const rows = await getSheetValues("Schedule!A2:I");
 
-// correct columns
-// [2]=date, [3]=home, [4]=away, [5]=homeScore, [6]=awayScore, [7]=final
+// [3]=home, [4]=away
 const games = rows.filter(row => {
-const home = row[3];
-const away = row[4];
+const home = String(row[3] || "").trim().toLowerCase();
+const away = String(row[4] || "").trim().toLowerCase();
+const t = team.toLowerCase();
 
-return (
-String(home).toLowerCase().trim() === team.toLowerCase().trim() ||
-String(away).toLowerCase().trim() === team.toLowerCase().trim()
-);
+return home === t || away === t;
 });
 
 if (!games.length) {
@@ -645,6 +636,7 @@ TEAM: team
 };
 
 for (let i = 0; i < 40; i++) {
+
 const g = games[i];
 
 if (!g) {
@@ -655,11 +647,13 @@ continue;
 const home = g[3] || "";
 const away = g[4] || "";
 
-const homeScore = g[5] || "";
-const awayScore = g[6] || "";
+const homeScore = g[5];
+const awayScore = g[6];
 const isFinal = String(g[7]).toLowerCase() === "true";
 
-// build format EXACTLY how you wanted
+// =========================
+// 🏒 FORMAT (YOUR EXACT STYLE)
+// =========================
 let line = `(H) ${home}\n(A) ${away}\n`;
 
 if (isFinal && homeScore !== "" && awayScore !== "") {
@@ -698,7 +692,7 @@ new ButtonBuilder()
 .setStyle(ButtonStyle.Primary)
 );
 
-// ❗ NOT ephemeral → stays forever in channel
+// persistent message
 return interaction.reply({
 content:
 "📅 **Season Schedule**\n\nClick the button below to view your personal schedule.",
