@@ -651,17 +651,35 @@ rep[`GAME${i+1}`] = "";
 continue;
 }
 
-const date = g[2] || "TBD";
-const home = g[3] || "";
-const away = g[4] || "";
+for (const g of games.slice(0, 40)) {
 
-const isFinal = String(g[7]).toLowerCase() === "true";
-const status = isFinal ? "FINAL" : "UPCOMING";
+const home = g[2];
+const away = g[3];
 
-rep[`GAME${i+1}`] =
-`${date}
-${home} vs ${away}
-${status}`;
+const homeScore = g[5];
+const awayScore = g[6];
+const isFinal = g[7] === "FINAL" || g[7] === true;
+
+// =========================
+// 🏠 BUILD LINES
+// =========================
+let line = "";
+
+// Always show BOTH teams on separate lines
+line += `(H) ${home}\n`;
+line += `(A) ${away}\n`;
+
+// =========================
+// 🏁 STATUS
+// =========================
+if (isFinal && homeScore !== "" && awayScore !== "") {
+line += `FINAL ${homeScore}-${awayScore}`;
+} else {
+line += `UPCOMING`;
+}
+
+text += line + "\n\n";
+}
 }
 
 // =========================
