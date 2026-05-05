@@ -9,6 +9,8 @@ REST,
 Routes,
 SlashCommandBuilder,
 AttachmentBuilder,
+ActionRowBuilder,
+ButtonBuilder
 } = require("discord.js");
 
 const { google } = require("googleapis");
@@ -85,7 +87,7 @@ new SlashCommandBuilder()
 
 new SlashCommandBuilder()
 .setName("schedule")
-.setDescription("View a team schedule"),
+.setDescription("View a team "),
 
 new SlashCommandBuilder()
 .setName("statleaders")
@@ -815,24 +817,25 @@ return n.toFixed(2);
 
 
 client.on("interactionCreate", async (interaction) => {
+try {
 
-  await handleScheduleSystem(interaction);
+// 🔥 HANDLE SCHEDULE SYSTEM FIRST
+await handleScheduleSystem(interaction);
 
-}
-  
+// =========================
+// OTHER COMMANDS
+// =========================
+if (!interaction.isChatInputCommand()) return;
+
 if (interaction.commandName === "removegame") {
 if (!isAdmin(interaction)) {
 return interaction.reply({
-content: "❌ You don't have permission to use this command.",
+content: "❌ You don't have permission.",
 ephemeral: true,
 });
 }
-
 return handleRemoveGame(interaction);
 }
-
-try {
-if (!interaction.isChatInputCommand()) return;
 
 if (interaction.commandName === "gameresults") {
 if (!isAdmin(interaction)) {
@@ -841,6 +844,7 @@ content: "❌ No permission.",
 ephemeral: true,
 });
 }
+return handleGameResults(interaction);
 }
 
 if (interaction.commandName === "mystats") {
@@ -851,30 +855,12 @@ if (interaction.commandName === "teamstats") {
 return handleTeamStats(interaction);
 }
 
-if (interaction.commandName === "schedule") {
-return handleSchedule(interaction);
-}
-
 if (interaction.commandName === "linkplayer") {
 return handleLinkPlayer(interaction);
 }
 
 if (interaction.commandName === "notifyunlinked") {
 return handleNotifyUnlinked(interaction);
-}
-
-if (interaction.commandName === "removegame") {
-if (!isAdmin(interaction)) {
-return interaction.reply({
-content: "❌ No permission.",
-ephemeral: true,
-});
-}
-return handleRemoveGame(interaction);
-}
-
-if (interaction.commandName === "gameresults") {
-return handleGameResults(interaction);
 }
 
 } catch (err) {
@@ -887,6 +873,7 @@ await interaction.reply("❌ Error occurred.");
 }
 }
 });
+
 
 const createGameResults = require("./gameResults");
 
