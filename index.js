@@ -678,7 +678,6 @@ line += `FINAL ${homeScore}-${awayScore}`;
 line += `UPCOMING`;
 }
 
-text += line + "\n\n";
 }
 }
 
