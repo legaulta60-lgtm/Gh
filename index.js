@@ -566,6 +566,116 @@ requestBody: { values },
 }
 
 
+async function handleScheduleSystem(interaction) {
+try {
+
+// =========================
+// 🔘 BUTTON CLICK
+// =========================
+if (interaction.isButton() && interaction.customId === "personal_schedule") {
+
+await interaction.deferUpdate();
+
+const userId = interaction.user.id;
+
+// 🔗 GET LINKED PLAYER
+const linked = await getSheetValues("Linked Players!A2:C1000");
+
+const link = linked.find(row => row[0] === userId);
+
+if (!link) {
+return interaction.editReply({
+content: "❌ You are not linked. Use /linkplayer first.",
+components: [],
+});
+}
+
+const playerName = link[2];
+
+// 📊 FIND TEAM
+const players = await getSheetValues("Player Stats!A3:I1000");
+
+const playerRow = players.find(r =>
+String(r[0]).toLowerCase().trim() === playerName.toLowerCase().trim()
+);
+
+if (!playerRow) {
+return interaction.editReply({
+content: "❌ Player not found in stats.",
+components: [],
+});
+}
+
+const team = playerRow[1];
+
+// 📅 GET SCHEDULE
+const rows = await getSheetValues("Schedule!A2:I");
+
+const games = rows.filter(row => {
+const home = row[2];
+const away = row[3];
+
+return (
+String(home).toLowerCase().trim() === team.toLowerCase().trim() ||
+String(away).toLowerCase().trim() === team.toLowerCase().trim()
+);
+});
+
+if (!games.length) {
+return interaction.editReply({
+content: `❌ No games found for ${team}.`,
+components: [],
+});
+}
+
+let text = `📅 **${team} Schedule**\n\n`;
+
+for (const g of games.slice(0, 15)) {
+const date = g[0] || "TBD";
+const home = g[2];
+const away = g[3];
+const status = g[7] || "UPCOMING";
+
+text += `${date} — ${home} vs ${away} (${status})\n`;
+}
+
+return interaction.editReply({
+content: text,
+components: [],
+});
+}
+
+// =========================
+// 📅 SLASH COMMAND
+// =========================
+if (interaction.isChatInputCommand() && interaction.commandName === "schedule") {
+
+const row = new ActionRowBuilder().addComponents(
+new ButtonBuilder()
+.setCustomId("personal_schedule")
+.setLabel("Personal Schedule")
+.setStyle(1)
+);
+
+return interaction.reply({
+content:
+"**Season Schedule**\n\nSelect an option below to view your personal team schedule.",
+components: [row],
+ephemeral: true,
+});
+}
+
+} catch (err) {
+console.error("SCHEDULE SYSTEM ERROR:", err);
+
+if (interaction.deferred || interaction.replied) {
+await interaction.editReply("❌ Error loading schedule.");
+} else {
+await interaction.reply({ content: "❌ Error.", ephemeral: true });
+}
+}
+}
+
 async function createImageFromTemplate(
 templateId,
 replacements,
@@ -705,11 +815,8 @@ return n.toFixed(2);
 
 
 client.on("interactionCreate", async (interaction) => {
-if (interaction.isStringSelectMenu()) {
 
-if (interaction.customId === "schedule_team_select") {
-return handleScheduleTeamSelect(interaction);
-}
+  await handleScheduleSystem(interaction);
 
 }
   
@@ -801,10 +908,4 @@ STAT_LEADERS_CHANNEL_ID,
 rebuildStandings
 });
 
-const createSchedule = require("./scheduleCommand");
-
-const { handleSchedule } = createSchedule({
-getSheetValues,
-createImageFromTemplate
-});
 client.login(process.env.DISCORD_TOKEN);
