@@ -580,7 +580,9 @@ await interaction.deferUpdate();
 
 const userId = interaction.user.id;
 
+// =========================
 // 🔗 GET LINKED PLAYER
+// =========================
 const linked = await getSheetValues("Linked Players!A2:C1000");
 
 const link = linked.find(row => row[0] === userId);
@@ -594,7 +596,9 @@ components: [],
 
 const playerName = link[2];
 
+// =========================
 // 📊 FIND TEAM
+// =========================
 const players = await getSheetValues("Player Stats!A3:I1000");
 
 const playerRow = players.find(r =>
@@ -610,12 +614,14 @@ components: [],
 
 const team = playerRow[1];
 
+// =========================
 // 📅 GET SCHEDULE
+// =========================
 const rows = await getSheetValues("Schedule!A2:I");
 
 const games = rows.filter(row => {
-const home = row[2];
-const away = row[3];
+const home = row[3]; // FIXED
+const away = row[4]; // FIXED
 
 return (
 String(home).toLowerCase().trim() === team.toLowerCase().trim() ||
@@ -630,20 +636,47 @@ components: [],
 });
 }
 
-let text = `📅 **${team} Schedule**\n\n`;
+// =========================
+// 🧾 TEMPLATE REPLACEMENTS
+// =========================
+const rep = {
+TEAM: team
+};
 
-for (const g of games.slice(0, 15)) {
-const date = g[0] || "TBD";
-const home = g[2];
-const away = g[3];
-const status = g[7] || "UPCOMING";
+for (let i = 0; i < 40; i++) {
+const g = games[i];
 
-text += `${date} — ${home} vs ${away} (${status})\n`;
+if (!g) {
+rep[`GAME${i+1}`] = "";
+continue;
 }
 
+const date = g[2] || "TBD";
+const home = g[3] || "";
+const away = g[4] || "";
+
+const isFinal = String(g[7]).toLowerCase() === "true";
+const status = isFinal ? "FINAL" : "UPCOMING";
+
+rep[`GAME${i+1}`] =
+`${date}
+${home} vs ${away}
+${status}`;
+}
+
+// =========================
+// 🖼️ GENERATE IMAGE
+// =========================
+const image = await createImageFromTemplate(
+process.env.SCHEDULE_TEMPLATE_ID,
+rep,
+"schedule.png"
+);
+
 return interaction.editReply({
-content: text,
-components: [],
+content: `📅 ${team} Schedule`,
+files: [{ attachment: image, name: "schedule.png" }],
+components: []
 });
 }
 
@@ -661,7 +694,7 @@ new ButtonBuilder()
 
 return interaction.reply({
 content:
-"**Season Schedule**\n\nSelect an option below to view your personal team schedule.",
+"📅 **Season Schedule**\n\nClick below to view your personal team schedule.",
 components: [row],
 ephemeral: true,
 });
