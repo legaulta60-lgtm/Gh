@@ -150,19 +150,20 @@ return interaction.editReply("❌ You are not linked. Use /linkplayer first.");
 const playerName = link[2];
 
 // =========================
-// 📊 FIND PLAYER TEAM
+// 🔗 GET LINKED PLAYER
 // =========================
-const players = await getSheetValues("Player Stats!A3:I");
+const linked = await getSheetValues("Linked Players!A2:C1000");
 
-const playerRow = players.find(r =>
-normalize(r[0]) === normalize(playerName)
-);
+const link = linked.find(row => row[0] === interaction.user.id);
 
-if (!playerRow) {
-return interaction.editReply("❌ Player not found in stats.");
+if (!link) {
+return interaction.editReply("❌ You are not linked.");
 }
 
-const team = playerRow[1];
+const playerName = link[2];
+
+// 🟢 GET TEAM DIRECTLY FROM LINKED SHEET
+const team = link[1]; // <-- THIS IS THE FIX
 
 // =========================
 // 📊 GET TEAM STATS
