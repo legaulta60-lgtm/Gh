@@ -568,15 +568,17 @@ requestBody: { values },
 }
 
 
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+
 async function handleScheduleSystem(interaction) {
 try {
 
 // =========================
-// 🔘 BUTTON CLICK
+// 🔘 BUTTON CLICK (PERSONAL)
 // =========================
 if (interaction.isButton() && interaction.customId === "personal_schedule") {
 
-await interaction.deferUpdate();
+await interaction.deferReply({ ephemeral: true });
 
 const userId = interaction.user.id;
 
@@ -585,13 +587,10 @@ const userId = interaction.user.id;
 // =========================
 const linked = await getSheetValues("Linked Players!A2:C1000");
 
-const link = linked.find(row => row[0] === userId);
+const link = linked.find(row => String(row[0]) === String(userId));
 
 if (!link) {
-return interaction.editReply({
-content: "❌ You are not linked. Use /linkplayer first.",
-components: [],
-});
+return interaction.editReply("❌ You are not linked. Use /linkplayer first.");
 }
 
 const playerName = link[2];
@@ -606,10 +605,7 @@ String(r[0]).toLowerCase().trim() === playerName.toLowerCase().trim()
 );
 
 if (!playerRow) {
-return interaction.editReply({
-content: "❌ Player not found in stats.",
-components: [],
-});
+return interaction.editReply("❌ Player not found in stats.");
 }
 
 const team = playerRow[1];
@@ -619,9 +615,11 @@ const team = playerRow[1];
 // =========================
 const rows = await getSheetValues("Schedule!A2:I");
 
+// correct columns
+// [2]=date, [3]=home, [4]=away, [5]=homeScore, [6]=awayScore, [7]=final
 const games = rows.filter(row => {
-const home = row[3]; // FIXED
-const away = row[4]; // FIXED
+const home = row[3];
+const away = row[4];
 
 return (
 String(home).toLowerCase().trim() === team.toLowerCase().trim() ||
@@ -630,14 +628,11 @@ String(away).toLowerCase().trim() === team.toLowerCase().trim()
 });
 
 if (!games.length) {
-return interaction.editReply({
-content: `❌ No games found for ${team}.`,
-components: [],
-});
+return interaction.editReply(`❌ No games found for ${team}.`);
 }
 
 // =========================
-// 🧾 TEMPLATE REPLACEMENTS
+// 🧾 BUILD TEMPLATE DATA
 // =========================
 const rep = {
 TEAM: team
@@ -651,34 +646,23 @@ rep[`GAME${i+1}`] = "";
 continue;
 }
 
-for (const g of games.slice(0, 40)) {
+const home = g[3] || "";
+const away = g[4] || "";
 
-const home = g[2];
-const away = g[3];
+const homeScore = g[5] || "";
+const awayScore = g[6] || "";
+const isFinal = String(g[7]).toLowerCase() === "true";
 
-const homeScore = g[5];
-const awayScore = g[6];
-const isFinal = g[7] === "FINAL" || g[7] === true;
+// build format EXACTLY how you wanted
+let line = `(H) ${home}\n(A) ${away}\n`;
 
-// =========================
-// 🏠 BUILD LINES
-// =========================
-let line = "";
-
-// Always show BOTH teams on separate lines
-line += `(H) ${home}\n`;
-line += `(A) ${away}\n`;
-
-// =========================
-// 🏁 STATUS
-// =========================
 if (isFinal && homeScore !== "" && awayScore !== "") {
 line += `FINAL ${homeScore}-${awayScore}`;
 } else {
 line += `UPCOMING`;
 }
 
-}
+rep[`GAME${i+1}`] = line;
 }
 
 // =========================
@@ -692,13 +676,12 @@ rep,
 
 return interaction.editReply({
 content: `📅 ${team} Schedule`,
-files: [{ attachment: image, name: "schedule.png" }],
-components: []
+files: [{ attachment: image, name: "schedule.png" }]
 });
 }
 
 // =========================
-// 📅 SLASH COMMAND
+// 📅 SLASH COMMAND (POST BUTTON)
 // =========================
 if (interaction.isChatInputCommand() && interaction.commandName === "schedule") {
 
@@ -706,14 +689,14 @@ const row = new ActionRowBuilder().addComponents(
 new ButtonBuilder()
 .setCustomId("personal_schedule")
 .setLabel("Personal Schedule")
-.setStyle(1)
+.setStyle(ButtonStyle.Primary)
 );
 
+// ❗ NOT ephemeral → stays forever in channel
 return interaction.reply({
 content:
-"📅 **Season Schedule**\n\nClick below to view your personal team schedule.",
+"📅 **Season Schedule**\n\nClick the button below to view your personal schedule.",
 components: [row],
-ephemeral: true,
 });
 }
 
