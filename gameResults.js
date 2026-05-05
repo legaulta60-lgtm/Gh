@@ -288,10 +288,28 @@ await appendSheetValues("Game Results!A2:F", [
 await rebuildAllStats();
 await rebuildStandings();
 
+// =========================
+// 🏒 GAME RECAP
+// =========================
+const recap = `**Game #${gameId}**
+(H) ${homeTeam} ${homeScore} - (A) ${awayTeam} ${awayScore}
+
+${recapNote}`;
+
+// send to results channel
+const channel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
+
+await channel.send({
+content: recap.trim()
+});
+
+// =========================
+// 📊 UPDATE POSTS
+// =========================
 await postStandings(interaction.client);
 await postStatLeaders(interaction.client);
 
-return interaction.editReply("✅ Game recorded");
+return interaction.editReply("✅ Game recorded + recap posted");
 }
 
 
