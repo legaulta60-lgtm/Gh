@@ -81,6 +81,9 @@ if (!rows.length) {
 return interaction.editReply("❌ No stats found.");
 }
 
+// =========================
+// 🧍 PLAYERS
+// =========================
 const players = rows.map(r => ({
 name: r[0],
 team: r[1],
@@ -92,6 +95,9 @@ TA: Number(r[7]) || 0,
 INT: Number(r[8]) || 0
 }));
 
+// =========================
+// 🥅 GOALIES
+// =========================
 const goalies = goalieRows.map(r => {
 const saves = Number(r[6]) || 0;
 const shots = Number(r[7]) || 0;
@@ -99,25 +105,29 @@ const shots = Number(r[7]) || 0;
 return {
 name: r[0],
 team: r[1],
-SV: shots > 0 ? (saves / shots).toFixed(3) : "0.000",
+SV: shots > 0 ? (saves / shots).toFixed(3).replace(/^0/, "") : ".000",
 GAA: Number(r[5]) || 0,
 SO: Number(r[8]) || 0
 };
 });
 
+// =========================
+// 🔢 HELPERS
+// =========================
 const top = (arr, key) => [...arr].sort((a,b)=>b[key]-a[key]).slice(0,5);
 
-// =========================
-// 🧾 TEMPLATE DATA
-// =========================
 const rep = {};
 const img = {};
 
-function fill(list, valueKey, prefix) {
+// =========================
+// 🔥 SKATER CATEGORIES
+// =========================
+function fill(list, key, prefix) {
 for (let i = 0; i < 5; i++) {
 const p = list[i] || {};
-rep[`${prefix}N${i+1}`] = p.name || "";
-rep[`${prefix}${i+1}`] = p[valueKey] ?? "0";
+
+rep[`${prefix}${i+1}`] = p[key] ?? "0"; // VALUE
+rep[`${prefix}N${i+1}`] = p.name || ""; // NAME
 
 if (TEAM_LOGOS[p.team]) {
 img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
@@ -125,13 +135,16 @@ img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
 }
 }
 
-fill(top(players,"PTS"),"PTS","P");
-fill(top(players,"G"),"G","G");
-fill(top(players,"A"),"A","A");
-fill(top(players,"BS"),"BS","B");
-fill(top(players,"TA"),"TA","T");
-fill(top(players,"INT"),"INT","I");
+fill(top(players,"PTS"),"PTS","PP");
+fill(top(players,"G"),"G","GP");
+fill(top(players,"A"),"A","AP");
+fill(top(players,"BS"),"BS","BP");
+fill(top(players,"TA"),"TA","TP");
+fill(top(players,"INT"),"INT","IP");
 
+// =========================
+// 🧤 GOALIE CATEGORIES
+// =========================
 const topSV = top(goalies,"SV");
 const topGAA = [...goalies].sort((a,b)=>a.GAA-b.GAA).slice(0,5);
 const topSO = top(goalies,"SO");
@@ -142,15 +155,19 @@ const sv = topSV[i] || {};
 const gaa = topGAA[i] || {};
 const so = topSO[i] || {};
 
+// SV%
+rep[`SV${i+1}`] = sv.SV ?? ".000";
 rep[`SVN${i+1}`] = sv.name || "";
-rep[`SV${i+1}`] = sv.SV ?? "0.000";
 
-rep[`GN${i+1}`] = gaa.name || "";
+// GAA
 rep[`GAA${i+1}`] = gaa.GAA ?? "0";
+rep[`GNM${i+1}`] = gaa.name || "";
 
-rep[`SON${i+1}`] = so.name || "";
+// SHUTOUTS
 rep[`SO${i+1}`] = so.SO ?? "0";
+rep[`SON${i+1}`] = so.name || "";
 
+// LOGOS
 if (TEAM_LOGOS[sv.team]) img[`SVLOGO${i+1}`] = TEAM_LOGOS[sv.team];
 if (TEAM_LOGOS[gaa.team]) img[`GLOGO${i+1}`] = TEAM_LOGOS[gaa.team];
 if (TEAM_LOGOS[so.team]) img[`SOLOGO${i+1}`] = TEAM_LOGOS[so.team];
@@ -166,9 +183,6 @@ rep,
 img
 );
 
-// =========================
-// 📤 REPLY TO USER
-// =========================
 return interaction.editReply({
 content: "📊 Stat Leaders",
 files: [{ attachment: image, name: "leaders.png" }]
