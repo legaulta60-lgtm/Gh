@@ -71,9 +71,6 @@ try {
 
 await interaction.deferReply();
 
-// =========================
-// 📊 LOAD DATA
-// =========================
 const rows = await getSheetValues("Player Stats!A3:I");
 const goalieRows = await getSheetValues("Goalie Stats!A3:I");
 
@@ -120,14 +117,14 @@ const rep = {};
 const img = {};
 
 // =========================
-// 🔥 SKATER CATEGORIES
+// 🔥 FILL FUNCTION (KEY FIX)
 // =========================
-function fill(list, key, prefix) {
+function fill(list, statKey, prefix) {
 for (let i = 0; i < 5; i++) {
 const p = list[i] || {};
 
-rep[`${prefix}${i+1}`] = p[key] ?? "0"; // VALUE
-rep[`${prefix}N${i+1}`] = p.name || ""; // NAME
+rep[`${prefix}N${i+1}`] = p.name || "";
+rep[`${prefix}P${i+1}`] = p[statKey] ?? "0";
 
 if (TEAM_LOGOS[p.team]) {
 img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
@@ -135,15 +132,18 @@ img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
 }
 }
 
-fill(top(players,"PTS"),"PTS","PP");
-fill(top(players,"G"),"G","GP");
-fill(top(players,"A"),"A","AP");
-fill(top(players,"BS"),"BS","BP");
-fill(top(players,"TA"),"TA","TP");
-fill(top(players,"INT"),"INT","IP");
+// =========================
+// 📊 PLAYER CATEGORIES
+// =========================
+fill(top(players,"PTS"),"PTS","P"); // PN / PP
+fill(top(players,"G"),"G","G"); // GN / GP
+fill(top(players,"A"),"A","A"); // AN / AP
+fill(top(players,"BS"),"BS","B"); // BN / BP
+fill(top(players,"TA"),"TA","T"); // TN / TP
+fill(top(players,"INT"),"INT","I"); // IN / IP
 
 // =========================
-// 🧤 GOALIE CATEGORIES
+// 🧤 GOALIES
 // =========================
 const topSV = top(goalies,"SV");
 const topGAA = [...goalies].sort((a,b)=>a.GAA-b.GAA).slice(0,5);
@@ -156,16 +156,16 @@ const gaa = topGAA[i] || {};
 const so = topSO[i] || {};
 
 // SV%
-rep[`SV${i+1}`] = sv.SV ?? ".000";
 rep[`SVN${i+1}`] = sv.name || "";
+rep[`SV${i+1}`] = sv.SV ?? ".000";
 
 // GAA
-rep[`GAA${i+1}`] = gaa.GAA ?? "0";
 rep[`GNM${i+1}`] = gaa.name || "";
+rep[`GAA${i+1}`] = gaa.GAA ?? "0";
 
 // SHUTOUTS
-rep[`SO${i+1}`] = so.SO ?? "0";
 rep[`SON${i+1}`] = so.name || "";
+rep[`SO${i+1}`] = so.SO ?? "0";
 
 // LOGOS
 if (TEAM_LOGOS[sv.team]) img[`SVLOGO${i+1}`] = TEAM_LOGOS[sv.team];
@@ -189,13 +189,8 @@ files: [{ attachment: image, name: "leaders.png" }]
 });
 
 } catch (err) {
-console.error("STAT LEADERS ERROR:", err);
-
-if (interaction.deferred || interaction.replied) {
+console.error(err);
 return interaction.editReply("❌ Error loading stat leaders.");
-} else {
-return interaction.reply({ content: "❌ Error.", ephemeral: true });
-}
 }
 }
 
