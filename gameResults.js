@@ -292,8 +292,8 @@ await rebuildStandings();
 // =========================
 // 🏒 GAME RECAP
 // =========================
-const recap = `**Game #${gameId}**
-(H) ${homeTeam} ${homeScore} - (A) ${awayTeam} ${awayScore}
+const recap = `__**Game #${gameId}**__
+**(H) ${homeTeam}** ${homeScore} - ${awayScore} **${awayTeam} (A)**
 
 ${recapNote}`;
 
