@@ -149,7 +149,7 @@ return interaction.editReply("❌ You are not linked. Use /linkplayer first.");
 
 const playerName = link[2];
 
-const team = link[1]; // <-- THIS IS THE FIX
+const team = link[3]; // <-- THIS IS THE FIX
 
 // =========================
 // 📊 GET TEAM STATS
