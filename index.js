@@ -139,7 +139,7 @@ await interaction.deferReply();
 // =========================
 // 🔗 GET LINKED PLAYER
 // =========================
-const linked = await getSheetValues("Linked Players!A2:C1000");
+const linked = await getSheetValues("Linked Players!A2:D1000"); // 🔥 FIXED RANGE
 
 const link = linked.find(row => row[0] === interaction.user.id);
 
@@ -148,19 +148,24 @@ return interaction.editReply("❌ You are not linked. Use /linkplayer first.");
 }
 
 const playerName = link[2];
+const team = (link[3] || "").trim(); // 🔥 SAFE
 
-const team = link[3]; // <-- THIS IS THE FIX
+if (!team) {
+return interaction.editReply("❌ No team set. Add your team in column D.");
+}
 
 // =========================
 // 📊 GET TEAM STATS
 // =========================
 const standings = await getSheetValues("Standings!K2:S50");
 
-const teamRow = standings.find(
-row => normalize(row[0]) === normalize(team)
+const teamRow = standings.find(row =>
+normalize(row[0]) === normalize(team)
 );
 
 if (!teamRow) {
+console.log("TEAM:", team);
+console.log("STANDINGS:", standings.map(r => r[0]));
 return interaction.editReply("❌ Team not found in standings.");
 }
 
@@ -176,6 +181,11 @@ const diff = gf - ga;
 
 const DIFF_POS = diff >= 0 ? `+${diff}` : "";
 const DIFF_NEG = diff < 0 ? `${diff}` : "";
+
+// =========================
+// 📊 LOAD PLAYERS (YOU WERE MISSING THIS)
+// =========================
+const players = await getSheetValues("Player Stats!A3:I");
 
 // =========================
 // 🔥 TOP PLAYERS
