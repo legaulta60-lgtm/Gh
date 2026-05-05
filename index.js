@@ -298,23 +298,48 @@ return interaction.editReply("❌ Error loading team stats.");
 }
 
 async function rebuildStandings() {
-const results = await getSheetValues("Game Results!A2:F");
+
+// 🔥 UPDATED RANGE (NOW INCLUDES RESULT TYPE)
+const results = await getSheetValues("Game Results!A2:G");
+
 let standings = await getSheetValues("Standings!K2:S50");
 
+// reset stats
 standings = standings.map(row => [
-row[0], 0,0,0,0,0,0,0,0
+row[0], // TEAM
+0, // GP
+0, // W
+0, // L
+0, // OT
+0, // PTS
+0, // GF
+0, // GA
+0 // DIFF
 ]);
 
-function updateTeam(teamName, gf, ga, isWin) {
+// =========================
+// 🔧 UPDATE TEAM
+// =========================
+function updateTeam(teamName, gf, ga, isWin, resultType) {
+
 for (let i = 0; i < standings.length; i++) {
+
 if (normalize(standings[i][0]) === normalize(teamName)) {
-standings[i][1] += 1;
+
+standings[i][1] += 1; // GP
 
 if (isWin) {
-standings[i][2] += 1;
-standings[i][5] += 2;
+standings[i][2] += 1; // W
+standings[i][5] += 2; // +2 pts
 } else {
-standings[i][3] += 1;
+
+if (resultType === "OT") {
+standings[i][4] += 1; // OT LOSS
+standings[i][5] += 1; // +1 pt
+} else {
+standings[i][3] += 1; // REG LOSS
+}
+
 }
 
 standings[i][6] += gf;
@@ -324,22 +349,35 @@ standings[i][8] = standings[i][6] - standings[i][7];
 }
 }
 
+// =========================
+// 🔁 PROCESS RESULTS
+// =========================
 for (const row of results) {
-const [id, home, away, homeScore, awayScore] = row;
+
+const [id, home, away, homeScore, awayScore, winner, resultType] = row;
 
 const h = Number(homeScore);
 const a = Number(awayScore);
 
-updateTeam(home, h, a, h > a);
-updateTeam(away, a, h, a > h);
+// skip bad rows
+if (!home || !away || isNaN(h) || isNaN(a)) continue;
+
+updateTeam(home, h, a, h > a, resultType);
+updateTeam(away, a, h, a > h, resultType);
 }
 
+// =========================
+// 📊 SORT STANDINGS
+// =========================
 standings.sort((a, b) => {
-if (b[5] !== a[5]) return b[5] - a[5];
-if (b[8] !== a[8]) return b[8] - a[8];
-return b[6] - a[6];
+if (b[5] !== a[5]) return b[5] - a[5]; // PTS
+if (b[8] !== a[8]) return b[8] - a[8]; // DIFF
+return b[6] - a[6]; // GF
 });
 
+// =========================
+// 💾 SAVE
+// =========================
 await sheets.spreadsheets.values.clear({
 spreadsheetId: process.env.SHEET_ID,
 range: "Standings!K2:S50",
