@@ -1,4 +1,4 @@
-module.exports = function ({
+rmodule.exports = function ({
 sheets,
 getSheetValues,
 appendSheetValues,
