@@ -211,18 +211,33 @@ let gameId = Date.now();
 let homeTeam="", awayTeam="";
 let homeScore=0, awayScore=0;
 
+// 🟢 NEW: OT DETECTION
+let resultType = "REG";
+
 let mode=null, currentTeam=null;
 
 const masterRows = [];
 
 for (const line of lines) {
 
+// =========================
+// 🆔 GAME ID
+// =========================
 if (line.toLowerCase().startsWith("game:")) {
 gameId = line.split(":")[1].trim();
 }
 
+// =========================
+// 🏒 SCORE + OT DETECTION
+// =========================
 if (line.toLowerCase().startsWith("score:")) {
 const clean = line.replace(/score:/i,"").trim();
+
+// detect OT
+if (clean.toLowerCase().includes("ot")) {
+resultType = "OT";
+}
+
 const m = clean.match(/(.+?)\s+(\d+)\s*-\s*(.+?)\s+(\d+)/);
 if (m) {
 homeTeam=m[1]; homeScore=+m[2];
@@ -230,6 +245,9 @@ awayTeam=m[3]; awayScore=+m[4];
 }
 }
 
+// =========================
+// MODE SWITCH
+// =========================
 if (line==="SKATERS") { mode="SKATERS"; continue; }
 if (line==="GOALIES") { mode="GOALIES"; continue; }
 
@@ -238,8 +256,11 @@ if (!line.includes(":")) continue;
 
 const [name, raw] = line.split(":").map(s=>s.trim());
 
-// SKATER
+// =========================
+// 🧍 SKATER
+// =========================
 if (mode==="SKATERS") {
+
 const alreadyUnlinked = unlinked.some(r =>
 normalize(r[1]) === normalize(name)
 );
@@ -249,6 +270,7 @@ await appendSheetValues("Unlinked Players!A:C", [
 [gameId, name, currentTeam]
 ]);
 }
+
 const g=+(raw.match(/(\d+)G/)||[0,0])[1];
 const a=+(raw.match(/(\d+)A/)||[0,0])[1];
 const ta=+(raw.match(/(\d+)TA/)||[0,0])[1];
@@ -258,7 +280,9 @@ const bs=+(raw.match(/(\d+)BS/)||[0,0])[1];
 masterRows.push([gameId,name,currentTeam,g,a,bs,ta,int,null,null,null,null,null]);
 }
 
-// GOALIE
+// =========================
+// 🧤 GOALIE
+// =========================
 if (mode==="GOALIES") {
 
 const alreadyUnlinked = unlinked.some(r =>
@@ -269,21 +293,43 @@ if (!isPlayerLinked(name, linked) && !alreadyUnlinked) {
 await appendSheetValues("Unlinked Players!A:C", [
 [gameId, name, currentTeam]
 ]);
-}  
+}
+
 if (!/^\d+\/\d+/.test(raw)) continue;
 
 const [saves,shots] = raw.match(/(\d+)\/(\d+)/).slice(1).map(Number);
 const ga = shots - saves;
 
-masterRows.push([gameId,name,currentTeam,null,null,null,null,null,saves,shots,raw.includes("W")?1:0,raw.includes("L")?1:0,ga===0?1:0]);
+masterRows.push([
+gameId,
+name,
+currentTeam,
+null,null,null,null,null,
+saves,
+shots,
+raw.includes("W")?1:0,
+raw.includes("L")?1:0,
+ga===0?1:0
+]);
 }
 }
 
-// WRITE
+// =========================
+// 💾 WRITE DATA
+// =========================
 await appendSheetValues("Master Stats!A3:M", masterRows);
 
-await appendSheetValues("Game Results!A2:F", [
-[gameId,homeTeam,awayTeam,homeScore,awayScore,homeScore>awayScore?homeTeam:awayTeam]
+// 🔥 UPDATED (NOW INCLUDES RESULT TYPE)
+await appendSheetValues("Game Results!A2:G", [
+[
+gameId,
+homeTeam,
+awayTeam,
+homeScore,
+awayScore,
+homeScore>awayScore?homeTeam:awayTeam,
+resultType
+]
 ]);
 
 await rebuildAllStats();
@@ -297,7 +343,6 @@ const recap = `__**Game #${gameId}**__
 
 ${recapNote}`;
 
-// send to results channel
 const channel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
 
 await channel.send({
@@ -312,7 +357,6 @@ await postStatLeaders(interaction.client);
 
 return interaction.editReply("✅ Game recorded + recap posted");
 }
-
 
 async function rebuildAllStats() {
 const master = await getSheetValues("Master Stats!A3:M1000");
