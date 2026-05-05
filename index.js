@@ -668,7 +668,7 @@ ${status}`;
 // 🖼️ GENERATE IMAGE
 // =========================
 const image = await createImageFromTemplate(
-process.env.SCHEDULE_TEMPLATE_ID,
+process.env.TEMPLATE_PRESENTATION_ID,
 rep,
 "schedule.png"
 );
