@@ -66,12 +66,20 @@ await channel.send({ files: [{ attachment: image, name: "standings.png" }] });
 // =========================
 // 📊 STAT LEADERS
 // =========================
-async function postStatLeaders(client) {
+async function handleStatLeaders(interaction) {
+try {
 
+await interaction.deferReply();
+
+// =========================
+// 📊 LOAD DATA
+// =========================
 const rows = await getSheetValues("Player Stats!A3:I");
 const goalieRows = await getSheetValues("Goalie Stats!A3:I");
 
-if (!rows.length) return;
+if (!rows.length) {
+return interaction.editReply("❌ No stats found.");
+}
 
 const players = rows.map(r => ({
 name: r[0],
@@ -91,7 +99,7 @@ const shots = Number(r[7]) || 0;
 return {
 name: r[0],
 team: r[1],
-SV: shots > 0 ? (saves / shots).toFixed(3) : 0, // FIXED
+SV: shots > 0 ? (saves / shots).toFixed(3) : "0.000",
 GAA: Number(r[5]) || 0,
 SO: Number(r[8]) || 0
 };
@@ -99,6 +107,9 @@ SO: Number(r[8]) || 0
 
 const top = (arr, key) => [...arr].sort((a,b)=>b[key]-a[key]).slice(0,5);
 
+// =========================
+// 🧾 TEMPLATE DATA
+// =========================
 const rep = {};
 const img = {};
 
@@ -106,8 +117,11 @@ function fill(list, valueKey, prefix) {
 for (let i = 0; i < 5; i++) {
 const p = list[i] || {};
 rep[`${prefix}N${i+1}`] = p.name || "";
-rep[`${prefix}P${i+1}`] = p[valueKey] ?? "0";
-if (TEAM_LOGOS[p.team]) img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
+rep[`${prefix}${i+1}`] = p[valueKey] ?? "0";
+
+if (TEAM_LOGOS[p.team]) {
+img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
+}
 }
 }
 
@@ -123,14 +137,15 @@ const topGAA = [...goalies].sort((a,b)=>a.GAA-b.GAA).slice(0,5);
 const topSO = top(goalies,"SO");
 
 for (let i = 0; i < 5; i++) {
+
 const sv = topSV[i] || {};
 const gaa = topGAA[i] || {};
 const so = topSO[i] || {};
 
 rep[`SVN${i+1}`] = sv.name || "";
-rep[`SV${i+1}`] = sv.SV ?? "0";
+rep[`SV${i+1}`] = sv.SV ?? "0.000";
 
-rep[`GNM${i+1}`] = gaa.name || "";
+rep[`GN${i+1}`] = gaa.name || "";
 rep[`GAA${i+1}`] = gaa.GAA ?? "0";
 
 rep[`SON${i+1}`] = so.name || "";
@@ -141,6 +156,9 @@ if (TEAM_LOGOS[gaa.team]) img[`GLOGO${i+1}`] = TEAM_LOGOS[gaa.team];
 if (TEAM_LOGOS[so.team]) img[`SOLOGO${i+1}`] = TEAM_LOGOS[so.team];
 }
 
+// =========================
+// 🖼️ GENERATE IMAGE
+// =========================
 const image = await createImageFromTemplate(
 process.env.LEADERS_TEMPLATE_ID,
 rep,
@@ -148,8 +166,23 @@ rep,
 img
 );
 
-const channel = await client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
-await channel.send({ files: [{ attachment: image, name: "leaders.png" }] });
+// =========================
+// 📤 REPLY TO USER
+// =========================
+return interaction.editReply({
+content: "📊 Stat Leaders",
+files: [{ attachment: image, name: "leaders.png" }]
+});
+
+} catch (err) {
+console.error("STAT LEADERS ERROR:", err);
+
+if (interaction.deferred || interaction.replied) {
+return interaction.editReply("❌ Error loading stat leaders.");
+} else {
+return interaction.reply({ content: "❌ Error.", ephemeral: true });
+}
+}
 }
 
 // =========================
