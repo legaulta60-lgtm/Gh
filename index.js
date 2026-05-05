@@ -25,7 +25,7 @@ intents: [GatewayIntentBits.Guilds],
 const TEAM_LOGOS = {
 "Buffalo Sabres": "https://i.imgur.com/5o8LJVa.png",
 "Montreal Canadiens": "https://i.imgur.com/ZnW3lIE.png",
-"Super Cobras": "https://i.imgur.com/KV87bDx.png",
+"Utah Mammoth": "https://i.imgur.com/wdAvOGj.png",
 "Toronto Marlies": "https://i.imgur.com/x25dwvT.png",
 "Toronto Maple Leafs": "https://i.imgur.com/fsjxkMb.png",
 "Fort Erie Hawks": "https://i.imgur.com/lO6lUWU.png",
