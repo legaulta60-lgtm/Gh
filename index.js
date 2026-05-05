@@ -103,8 +103,14 @@ new SlashCommandBuilder()
 .addStringOption((option) =>
 option
 .setName("input")
-.setDescription("Format: Leafs 3 - Canadiens 2")
+.setDescription("Game input (stats)")
 .setRequired(true),
+)
+.addStringOption((option) =>
+option
+.setName("recap")
+.setDescription("Optional recap message")
+.setRequired(false),
 ),
 ];
 
