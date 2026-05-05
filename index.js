@@ -149,20 +149,6 @@ return interaction.editReply("❌ You are not linked. Use /linkplayer first.");
 
 const playerName = link[2];
 
-// =========================
-// 🔗 GET LINKED PLAYER
-// =========================
-const linked = await getSheetValues("Linked Players!A2:C1000");
-
-const link = linked.find(row => row[0] === interaction.user.id);
-
-if (!link) {
-return interaction.editReply("❌ You are not linked.");
-}
-
-const playerName = link[2];
-
-// 🟢 GET TEAM DIRECTLY FROM LINKED SHEET
 const team = link[1]; // <-- THIS IS THE FIX
 
 // =========================
