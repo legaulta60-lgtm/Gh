@@ -84,17 +84,13 @@ standingsMessageId = msg.id;
 // =========================
 // 📊 STAT LEADERS
 // =========================
-async function handleStatLeaders(interaction) {
+async function handleStatLeaders(client) {
 try {
-
-await interaction.deferReply();
 
 const rows = await getSheetValues("Player Stats!A3:I");
 const goalieRows = await getSheetValues("Goalie Stats!A3:I");
 
-if (!rows.length) {
-return interaction.editReply("❌ No stats found.");
-}
+if (!rows.length) return;
 
 // =========================
 // 🧍 PLAYERS
@@ -201,6 +197,26 @@ rep,
 img
 );
 
+// =========================
+// 🗑 DELETE OLD MESSAGE
+// =========================
+if (statLeadersMessageId) {
+try {
+const oldMsg = await channel.messages.fetch(statLeadersMessageId);
+await oldMsg.delete();
+} catch {}
+}
+
+// =========================
+// 📤 SEND NEW MESSAGE
+// =========================
+const msg = await channel.send({
+files: [{ attachment: image, name: "leaders.png" }]
+});
+
+// save newest message id
+statLeadersMessageId = msg.id;
+  
 return interaction.editReply({
 content: "📊 Stat Leaders",
 files: [{ attachment: image, name: "leaders.png" }]
