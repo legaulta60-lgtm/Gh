@@ -83,18 +83,10 @@ new SlashCommandBuilder()
 .setName("teamstats")
 .setDescription("View a team stats card"),
 
-new SlashCommandBuilder()
-.setName("standings")
-.setDescription("View league standings"),
-
 
 new SlashCommandBuilder()
 .setName("schedule")
 .setDescription("View a team "),
-
-new SlashCommandBuilder()
-.setName("statleaders")
-.setDescription("View league stat leaders"),
 
 new SlashCommandBuilder()
 .setName("removegame")
@@ -929,9 +921,6 @@ if (interaction.commandName === "gameresults") {
 return handleGameResults(interaction);
 }
 
-if (interaction.commandName === "statleaders") {
-  return handleStatLeaders(interaction);
-}  
 
 if (interaction.commandName === "mystats") {
 return handleMyStats(interaction);
