@@ -49,6 +49,12 @@ scopes: [
 const sheets = google.sheets({ version: "v4", auth });
 const slides = google.slides({ version: "v1", auth });
 
+const PUBLIC_COMMANDS = [
+  "linkplayer",
+  "mystats",
+  "teamstats"
+  ];
+
 const commands = [
 
 new SlashCommandBuilder()
@@ -897,6 +903,19 @@ await handleScheduleSystem(interaction);
 // OTHER COMMANDS
 // =========================
 if (!interaction.isChatInputCommand()) return;
+
+// =========================
+// 🔒 PUBLIC / ADMIN COMMANDS
+// =========================
+if (
+!PUBLIC_COMMANDS.includes(interaction.commandName) &&
+!isAdmin(interaction)
+) {
+return interaction.reply({
+content: "❌ You do not have permission to use this command.",
+ephemeral: true,
+});
+}
 
 if (interaction.commandName === "removegame") {
 if (!isAdmin(interaction)) {
