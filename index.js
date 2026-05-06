@@ -22,6 +22,9 @@ const client = new Client({
 intents: [GatewayIntentBits.Guilds],
 });
 
+let standingMessageId = null;
+let statLeadersMessageId = null;
+
 const TEAM_LOGOS = {
 "Buffalo Sabres": "https://i.imgur.com/5o8LJVa.png",
 "Montreal Canadiens": "https://i.imgur.com/1na8DlE.png",
