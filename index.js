@@ -918,22 +918,11 @@ ephemeral: true,
 }
 
 if (interaction.commandName === "removegame") {
-if (!isAdmin(interaction)) {
-return interaction.reply({
-content: "❌ You don't have permission.",
-ephemeral: true,
-});
-}
 return handleRemoveGame(interaction);
 }
 
 if (interaction.commandName === "gameresults") {
-if (!isAdmin(interaction)) {
-return interaction.reply({
-content: "❌ No permission.",
-ephemeral: true,
-});
-}
+
 return handleGameResults(interaction);
 }
 
