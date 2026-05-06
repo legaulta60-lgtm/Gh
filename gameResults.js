@@ -60,7 +60,25 @@ img
 );
 
 const channel = await client.channels.fetch(STANDINGS_CHANNEL_ID);
-await channel.send({ files: [{ attachment: image, name: "standings.png" }] });
+// =========================
+// 🗑 DELETE OLD MESSAGE
+// =========================
+if (standingsMessageId) {
+try {
+const oldMsg = await channel.messages.fetch(standingsMessageId);
+await oldMsg.delete();
+} catch {}
+}
+
+// =========================
+// 📤 SEND NEW MESSAGE
+// =========================
+const msg = await channel.send({
+files: [{ attachment: image, name: "standings.png" }]
+});
+
+// save newest message id
+standingsMessageId = msg.id;
 }
 
 // =========================
