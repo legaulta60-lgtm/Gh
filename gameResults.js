@@ -24,6 +24,9 @@ row[2] && normalize(row[2]) === normalize(name)
 );
 }
 
+let standingsMessageId = null;
+let statLeadersMessageId = null;
+  
 // =========================
 // 🏆 POST STANDINGS
 // =========================
@@ -210,6 +213,7 @@ await oldMsg.delete();
 // =========================
 // 📤 SEND NEW MESSAGE
 // =========================
+const channel = await client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
 const msg = await channel.send({
 files: [{ attachment: image, name: "leaders.png" }]
 });
@@ -217,14 +221,11 @@ files: [{ attachment: image, name: "leaders.png" }]
 // save newest message id
 statLeadersMessageId = msg.id;
   
-return interaction.editReply({
-content: "📊 Stat Leaders",
-files: [{ attachment: image, name: "leaders.png" }]
-});
+return msg;
 
 } catch (err) {
 console.error(err);
-return interaction.editReply("❌ Error loading stat leaders.");
+return console.error("❌ Error loading stat leaders.");
 }
 }
 
@@ -323,7 +324,7 @@ const [name, raw] = line.split(":").map(s=>s.trim());
 // =========================
 if (mode==="SKATERS") {
 
-await syncPlayerTeam(name, currentTeam); // 🔥 NEW
+
 
 const alreadyUnlinked = unlinked.some(r =>
 normalize(r[1]) === normalize(name)
@@ -349,7 +350,7 @@ masterRows.push([gameId,name,currentTeam,g,a,bs,ta,int,null,null,null,null,null]
 // =========================
 if (mode==="GOALIES") {
 
-await syncPlayerTeam(name, currentTeam); // 🔥 NEW
+
 
 const alreadyUnlinked = unlinked.some(r =>
 normalize(r[1]) === normalize(name)
@@ -398,6 +399,9 @@ resultType
 await rebuildAllStats();
 await rebuildStandings();
 
+postStandings(interaction.client);
+handleStatLeaders(interaction.client);
+
 // =========================
 // 🏒 GAME RECAP
 // =========================
@@ -422,7 +426,13 @@ const players = {};
 const goalies = {};
 
 for (const r of master) {
-const name = r[1];
+const rawName = r[1];
+const key = normalize(rawName);
+
+if (!players[key]) {
+  players[key] = [rawName, team, 0,0,0,0,0,0,0];
+}
+  
 const team = r[2];
 
 const isSkater = r[3] !== "" && r[3] !== null && r[3] !== undefined;
@@ -445,8 +455,8 @@ players[name][8] += Number(r[7]) || 0;
 
 // GOALIE
 if (isGoalie && !isSkater) {
-if (!goalies[name]) {
-goalies[name] = [name, team, 0,0,0,0,0,0,0];
+if (!goalies[key]) {
+goalies[key] = [name, team, 0,0,0,0,0,0,0];
 }
 
 const saves = Number(r[8]) || 0;
