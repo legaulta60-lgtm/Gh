@@ -428,12 +428,12 @@ const goalies = {};
 for (const r of master) {
 const rawName = r[1];
 const key = normalize(rawName);
-
+const team = r[2];
+  
 if (!players[key]) {
   players[key] = [rawName, team, 0,0,0,0,0,0,0];
 }
   
-const team = r[2];
 
 const isSkater = r[3] !== "" && r[3] !== null && r[3] !== undefined;
 const isGoalie = r[8] !== "" && r[8] !== null && r[8] !== undefined;
