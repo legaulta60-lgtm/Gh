@@ -662,14 +662,18 @@ await interaction.deferReply();
 const userId = interaction.user.id;
 
 // =========================
-// 🔗 GET LINKED PLAYER (NOW A:D)
+// 🔗 GET LINKED PLAYER
 // =========================
 const linkedRows = await getSheetValues("Linked Players!A2:D1000");
 
-const link = linkedRows.find(row => String(row[0]) === String(userId));
+const link = linkedRows.find(
+row => String(row[0]) === String(userId)
+);
 
 if (!link) {
-return interaction.editReply("❌ You are not linked. Use /linkplayer first.");
+return interaction.editReply(
+"❌ You are not linked. Use /linkplayer first."
+);
 }
 
 const playerName = link[2];
@@ -677,19 +681,30 @@ const playerName = link[2];
 // =========================
 // 📊 GET STATS
 // =========================
-const playerRows = await getSheetValues("Player Stats!A3:I");
-const goalieRows = await getSheetValues("Goalie Stats!A3:I");
+const playerRows = await getSheetValues("Player Stats!A3:I1000");
+const goalieRows = await getSheetValues("Goalie Stats!A3:I1000");
 
-const skater = playerRows.find(r => r[0] === playerName);
-const goalie = goalieRows.find(r => r[0] === playerName);
+// 🔥 FIXED NORMALIZATION
+const skater = playerRows.find(r =>
+normalize(r[0]) === normalize(playerName)
+);
+
+const goalie = goalieRows.find(r =>
+normalize(r[0]) === normalize(playerName)
+);
 
 // =========================
-// 🏒 TEAM (FIXED - SOURCE OF TRUTH)
+// 🏒 TEAM
 // =========================
-const team = (link?.[3] || skater?.[1] || goalie?.[1] || "").trim();
+const team = (
+link?.[3] ||
+skater?.[1] ||
+goalie?.[1] ||
+""
+).trim();
 
 // =========================
-// 🧮 CALCULATIONS
+// 🧮 SKATER STATS
 // =========================
 const gp = Number(skater?.[2]) || 0;
 const g = Number(skater?.[3]) || 0;
@@ -700,8 +715,14 @@ const bs = Number(skater?.[6]) || 0;
 const ta = Number(skater?.[7]) || 0;
 const int = Number(skater?.[8]) || 0;
 
-const ppg = gp > 0 ? (pts / gp).toFixed(2) : "0.00";
+const ppg =
+gp > 0
+? (pts / gp).toFixed(2)
+: "0.00";
 
+// =========================
+// 🧤 GOALIE STATS
+// =========================
 const ggp = Number(goalie?.[2]) || 0;
 const w = Number(goalie?.[3]) || 0;
 const l = Number(goalie?.[4]) || 0;
@@ -709,7 +730,11 @@ const l = Number(goalie?.[4]) || 0;
 const saves = Number(goalie?.[6]) || 0;
 const shots = Number(goalie?.[7]) || 0;
 
-const sv = shots > 0 ? (saves / shots).toFixed(3) : "0.000";
+const sv =
+shots > 0
+? (saves / shots).toFixed(3)
+: "0.000";
+
 const gaa = Number(goalie?.[5]) || 0;
 const so = Number(goalie?.[8]) || 0;
 
@@ -741,28 +766,25 @@ SO: so
 };
 
 // =========================
-// 🖼️ LOGO FIX (BULLETPROOF)
+// 🖼️ TEAM LOGO
 // =========================
 const imageReplacements = {};
 
-function norm(v) {
-return String(v || "").toLowerCase().trim();
-}
-
 const logoKey = Object.keys(TEAM_LOGOS).find(
-key => norm(key) === norm(team)
+key => normalize(key) === normalize(team)
 );
 
 const fallbackKey = Object.keys(TEAM_LOGOS).find(
-key => norm(key).includes(norm(team)) || norm(team).includes(norm(key))
+key =>
+normalize(key).includes(normalize(team)) ||
+normalize(team).includes(normalize(key))
 );
 
 const finalKey = logoKey || fallbackKey;
 
 if (finalKey && TEAM_LOGOS[finalKey]) {
-imageReplacements.TEAM_LOGO = TEAM_LOGOS[finalKey];
-} else {
-console.log("❌ LOGO NOT FOUND FOR TEAM:", team);
+imageReplacements.TEAM_LOGO =
+TEAM_LOGOS[finalKey];
 }
 
 // =========================
@@ -776,12 +798,20 @@ imageReplacements
 );
 
 return interaction.editReply({
-files: [{ attachment: image, name: "mystats.png" }]
+files: [
+{
+attachment: image,
+name: "mystats.png"
+}
+]
 });
 
 } catch (err) {
 console.error(err);
-return interaction.editReply("❌ Error loading stats.");
+
+return interaction.editReply(
+"❌ Error loading stats."
+);
 }
 }
 
