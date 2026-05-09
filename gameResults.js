@@ -440,17 +440,17 @@ const isGoalie = r[8] !== "" && r[8] !== null && r[8] !== undefined;
 
 // SKATER
 if (isSkater && !isGoalie) {
-if (!players[name]) {
-players[name] = [name, team, 0,0,0,0,0,0,0];
+if (!players[key]) {
+players[key] = [name, team, 0,0,0,0,0,0,0];
 }
 
-players[name][2] += 1;
-players[name][3] += Number(r[3]) || 0;
-players[name][4] += Number(r[4]) || 0;
-players[name][5] += (Number(r[3]) + Number(r[4])) || 0;
-players[name][6] += Number(r[5]) || 0;
-players[name][7] += Number(r[6]) || 0;
-players[name][8] += Number(r[7]) || 0;
+players[key][2] += 1;
+players[key][3] += Number(r[3]) || 0;
+players[key][4] += Number(r[4]) || 0;
+players[key][5] += (Number(r[3]) + Number(r[4])) || 0;
+players[key][6] += Number(r[5]) || 0;
+players[key][7] += Number(r[6]) || 0;
+players[key][8] += Number(r[7]) || 0;
 }
 
 // GOALIE
@@ -463,13 +463,13 @@ const saves = Number(r[8]) || 0;
 const shots = Number(r[9]) || 0;
 const ga = shots - saves;
 
-goalies[name][2] += 1;
-goalies[name][3] += Number(r[10]) || 0;
-goalies[name][4] += Number(r[11]) || 0;
-goalies[name][5] += ga;
-goalies[name][6] += saves;
-goalies[name][7] += shots;
-goalies[name][8] += Number(r[12]) || 0;
+goalies[key][2] += 1;
+goalies[key][3] += Number(r[10]) || 0;
+goalies[key][4] += Number(r[11]) || 0;
+goalies[key][5] += ga;
+goalies[key][6] += saves;
+goalies[key][7] += shots;
+goalies[key][8] += Number(r[12]) || 0;
 }
 }
 
