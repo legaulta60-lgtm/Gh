@@ -441,7 +441,7 @@ const isGoalie = r[8] !== "" && r[8] !== null && r[8] !== undefined;
 // SKATER
 if (isSkater && !isGoalie) {
 if (!players[key]) {
-players[key] = [name, team, 0,0,0,0,0,0,0];
+players[key] = [key, team, 0,0,0,0,0,0,0];
 }
 
 players[key][2] += 1;
@@ -456,7 +456,7 @@ players[key][8] += Number(r[7]) || 0;
 // GOALIE
 if (isGoalie && !isSkater) {
 if (!goalies[key]) {
-goalies[key] = [name, team, 0,0,0,0,0,0,0];
+goalies[key] = [key, team, 0,0,0,0,0,0,0];
 }
 
 const saves = Number(r[8]) || 0;
