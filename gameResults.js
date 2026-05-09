@@ -411,7 +411,7 @@ const channel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID)
 await channel.send({ content: recap.trim() });
 
 await postStandings(interaction.client);
-await postStatLeaders(interaction.client);
+
 
 return interaction.editReply("✅ Game recorded + recap posted");
 }
