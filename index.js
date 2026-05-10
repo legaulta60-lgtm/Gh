@@ -30,7 +30,7 @@ const TEAM_LOGOS = {
 "Montreal Canadiens": "https://i.imgur.com/1na8DlE.png",
 "Utah Mammoth": "https://i.imgur.com/wdAvOGj.png",
 "Toronto Marlies": "https://i.imgur.com/x25dwvT.png",
-"Toronto Maple Leafs": "https://i.imgur.com/DTGLpYi.png",
+"Pittsburg Penguins": "https://i.imgur.com/ey37qq2.png",
 "Fort Erie Hawks": "https://i.imgur.com/lO6lUWU.png",
 };
 
