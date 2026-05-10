@@ -28,7 +28,7 @@ let statLeadersMessageId = null;
 const TEAM_LOGOS = {
 "Buffalo Sabres": "https://i.imgur.com/5o8LJVa.png",
 "Montreal Canadiens": "https://i.imgur.com/1na8DlE.png",
-"Utah Mammoth": "https://i.imgur.com/wdAvOGj.png",
+"Utah Mammoth": "https://i.imgur.com/21YufRk.png",
 "Toronto Marlies": "https://i.imgur.com/x25dwvT.png",
 "Pittsburgh Penguins": "https://i.imgur.com/vpGAQAO.png",
 "Fort Erie Hawks": "https://i.imgur.com/lO6lUWU.png",
