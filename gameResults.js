@@ -88,22 +88,28 @@ standingsMessageId = msg.id;
 // 📊 STAT LEADERS
 // =========================
 async function handleStatLeaders(client) {
+
 try {
 
 const rows = await getSheetValues("Player Stats!A3:I");
-const goalieRows = await getSheetValues("Goalie Stats!A3:I");
+const goalieRows = await getSheetValues("Goalie Stats!A3:K");
 
 if (!rows.length) return;
 
 // =========================
 // 🧍 PLAYERS
 // =========================
-const players = rows.map(r => ({
+
+const players = rows
+.filter(r => r[0])
+.map(r => ({
 name: r[0],
 team: r[1],
+
 G: Number(r[3]) || 0,
 A: Number(r[4]) || 0,
 PTS: Number(r[5]) || 0,
+
 BS: Number(r[6]) || 0,
 TA: Number(r[7]) || 0,
 INT: Number(r[8]) || 0
@@ -112,59 +118,100 @@ INT: Number(r[8]) || 0
 // =========================
 // 🥅 GOALIES
 // =========================
-const goalies = goalieRows.map(r => {
-const saves = Number(r[6]) || 0;
-const shots = Number(r[7]) || 0;
 
-return {
+const goalies = goalieRows
+.filter(r => r[0])
+.map(r => ({
+
 name: r[0],
 team: r[1],
-SV: shots > 0 ? (saves / shots).toFixed(3).replace(/^0/, "") : ".000",
-GAA: Number(r[5]) || 0,
-SO: Number(r[8]) || 0
-};
-});
+
+GP: Number(r[2]) || 0,
+W: Number(r[3]) || 0,
+L: Number(r[4]) || 0,
+GA: Number(r[5]) || 0,
+
+Saves: Number(r[6]) || 0,
+Shots: Number(r[7]) || 0,
+
+SO: Number(r[8]) || 0,
+
+SV: Number(r[9]) || 0,
+GAA: Number(r[10]) || 0
+
+}));
 
 // =========================
-// 🔢 HELPERS
+// 🔢 SAFE TOP SORT
 // =========================
-const top = (arr, key) => [...arr].sort((a,b)=>b[key]-a[key]).slice(0,5);
+
+function top(arr, key, asc = false) {
+
+return [...arr]
+.filter(p => p && p.name)
+.sort((a, b) => {
+
+const aVal = Number(a[key]) || 0;
+const bVal = Number(b[key]) || 0;
+
+return asc
+? aVal - bVal
+: bVal - aVal;
+
+})
+.slice(0, 5);
+}
+
+// =========================
+// 📦 TEMPLATE DATA
+// =========================
 
 const rep = {};
 const img = {};
 
 // =========================
-// 🔥 FILL FUNCTION (KEY FIX)
+// 🖼️ SAFE FILL
 // =========================
+
 function fill(list, statKey, prefix) {
+
 for (let i = 0; i < 5; i++) {
+
 const p = list[i] || {};
 
-rep[`${prefix}N${i+1}`] = p.name || "";
-rep[`${prefix}P${i+1}`] = p[statKey] ?? "0";
+rep[`${prefix}N${i+1}`] =
+p.name || "";
 
-if (TEAM_LOGOS[p.team]) {
-img[`${prefix}LOGO${i+1}`] = TEAM_LOGOS[p.team];
+rep[`${prefix}P${i+1}`] =
+p[statKey] ?? "0";
+
+// SAFE LOGO LOOKUP
+const logo = TEAM_LOGOS[p.team];
+
+if (logo) {
+img[`${prefix}LOGO${i+1}`] = logo;
 }
 }
 }
 
 // =========================
-// 📊 PLAYER CATEGORIES
+// 📊 PLAYER LEADERS
 // =========================
-fill(top(players,"PTS"),"PTS","P"); // PN / PP
-fill(top(players,"G"),"G","G"); // GN / GP
-fill(top(players,"A"),"A","A"); // AN / AP
-fill(top(players,"BS"),"BS","B"); // BN / BP
-fill(top(players,"TA"),"TA","T"); // TN / TP
-fill(top(players,"INT"),"INT","I"); // IN / IP
+
+fill(top(players, "PTS"), "PTS", "P");
+fill(top(players, "G"), "G", "G");
+fill(top(players, "A"), "A", "A");
+fill(top(players, "BS"), "BS", "B");
+fill(top(players, "TA"), "TA", "T");
+fill(top(players, "INT"), "INT", "I");
 
 // =========================
-// 🧤 GOALIES
+// 🧤 GOALIE LEADERS
 // =========================
-const topSV = top(goalies,"SV");
-const topGAA = [...goalies].sort((a,b)=>a.GAA-b.GAA).slice(0,5);
-const topSO = top(goalies,"SO");
+
+const topSV = top(goalies, "SV");
+const topGAA = top(goalies, "GAA", true);
+const topSO = top(goalies, "SO");
 
 for (let i = 0; i < 5; i++) {
 
@@ -174,25 +221,34 @@ const so = topSO[i] || {};
 
 // SV%
 rep[`SVN${i+1}`] = sv.name || "";
-rep[`SV${i+1}`] = sv.SV ?? ".000";
+rep[`SV${i+1}`] = sv.SV ?? "0.000";
 
 // GAA
 rep[`GNM${i+1}`] = gaa.name || "";
-rep[`GAA${i+1}`] = gaa.GAA ?? "0";
+rep[`GAA${i+1}`] = gaa.GAA ?? "0.00";
 
 // SHUTOUTS
 rep[`SON${i+1}`] = so.name || "";
 rep[`SO${i+1}`] = so.SO ?? "0";
 
 // LOGOS
-if (TEAM_LOGOS[sv.team]) img[`SVLOGO${i+1}`] = TEAM_LOGOS[sv.team];
-if (TEAM_LOGOS[gaa.team]) img[`GLOGO${i+1}`] = TEAM_LOGOS[gaa.team];
-if (TEAM_LOGOS[so.team]) img[`SOLOGO${i+1}`] = TEAM_LOGOS[so.team];
+if (TEAM_LOGOS[sv.team]) {
+img[`SVLOGO${i+1}`] = TEAM_LOGOS[sv.team];
+}
+
+if (TEAM_LOGOS[gaa.team]) {
+img[`GLOGO${i+1}`] = TEAM_LOGOS[gaa.team];
+}
+
+if (TEAM_LOGOS[so.team]) {
+img[`SOLOGO${i+1}`] = TEAM_LOGOS[so.team];
+}
 }
 
 // =========================
 // 🖼️ GENERATE IMAGE
 // =========================
+
 const image = await createImageFromTemplate(
 process.env.LEADERS_TEMPLATE_ID,
 rep,
@@ -201,323 +257,654 @@ img
 );
 
 // =========================
-// 🗑 DELETE OLD MESSAGE
+// 📡 CHANNEL
 // =========================
+
+const channel =
+await client.channels.fetch(
+STAT_LEADERS_CHANNEL_ID
+);
+
+// =========================
+// 🗑 DELETE OLD
+// =========================
+
 if (statLeadersMessageId) {
+
 try {
-const oldMsg = await channel.messages.fetch(statLeadersMessageId);
+
+const oldMsg =
+await channel.messages.fetch(
+statLeadersMessageId
+);
+
 await oldMsg.delete();
+
 } catch {}
 }
 
 // =========================
-// 📤 SEND NEW MESSAGE
+// 📤 SEND NEW
 // =========================
-const channel = await client.channels.fetch(STAT_LEADERS_CHANNEL_ID);
+
 const msg = await channel.send({
-files: [{ attachment: image, name: "leaders.png" }]
+files: [
+{
+attachment: image,
+name: "leaders.png"
+}
+]
 });
 
-// save newest message id
 statLeadersMessageId = msg.id;
-  
+
 return msg;
 
 } catch (err) {
+
 console.error(err);
-return console.error("❌ Error loading stat leaders.");
+
+return console.error(
+"❌ Error loading stat leaders."
+);
 }
 }
+
+  
 
 // =========================
 // 🏒 GAME RESULTS
 // =========================
 async function handleGameResults(interaction) {
+
 await interaction.deferReply();
 
-const input = interaction.options.getString("input");
-const lines = input.split("\n").map(l=>l.trim());
-const recapNote = interaction.options.getString("recap") || "";
+const input =
+interaction.options.getString("input");
 
-// 🔥 UPDATED (A:D)
-const linked = await getSheetValues("Linked Players!A2:D1000");
-const unlinked = await getSheetValues("Unlinked Players!A2:C1000");
+const lines =
+input.split("\n").map(
+l => l.trim()
+);
+
+const recapNote =
+interaction.options.getString(
+"recap"
+) || "";
+
+// =========================
+// 📄 SHEET DATA
+// =========================
+
+const linked =
+await getSheetValues(
+"Linked Players!A2:D1000"
+);
+
+const unlinked =
+await getSheetValues(
+"Unlinked Players!A2:C1000"
+);
+
+// =========================
+// 🎮 GAME INFO
+// =========================
 
 let gameId = Date.now();
-let homeTeam="", awayTeam="";
-let homeScore=0, awayScore=0;
+
+let homeTeam = "";
+let awayTeam = "";
+
+let homeScore = 0;
+let awayScore = 0;
 
 let resultType = "REG";
 
-let mode=null, currentTeam=null;
+let mode = null;
+let currentTeam = null;
 
 const masterRows = [];
 
 // =========================
-// 🔥 TEAM SYNC FUNCTION
-// =========================
-async function syncPlayerTeam(name, team) {
-
-const linkedData = await getSheetValues("Linked Players!A2:D1000");
-const playerData = await getSheetValues("Player Stats!A3:I1000");
-const goalieData = await getSheetValues("Goalie Stats!A3:I1000");
-
-// LINKED PLAYERS
-for (let i = 0; i < linkedData.length; i++) {
-if (normalize(linkedData[i][2]) === normalize(name)) {
-linkedData[i][3] = team;
-}
-}
-
-// PLAYER STATS
-for (let i = 0; i < playerData.length; i++) {
-if (normalize(playerData[i][0]) === normalize(name)) {
-playerData[i][1] = team;
-}
-}
-
-// GOALIE STATS
-for (let i = 0; i < goalieData.length; i++) {
-if (normalize(goalieData[i][0]) === normalize(name)) {
-goalieData[i][1] = team;
-}
-}
-
-await updateSheetValues("Linked Players!A2:D1000", linkedData);
-await updateSheetValues("Player Stats!A3:I1000", playerData);
-await updateSheetValues("Goalie Stats!A3:I1000", goalieData);
-}
-
-// =========================
 // 🔁 PARSE INPUT
 // =========================
+
 for (const line of lines) {
 
-if (line.toLowerCase().startsWith("game:")) {
-gameId = line.split(":")[1].trim();
+// =========================
+// 🎮 GAME ID
+// =========================
+
+if (
+line.toLowerCase().startsWith(
+"game:"
+)
+) {
+
+gameId =
+line.split(":")[1].trim();
+
+continue;
 }
 
-if (line.toLowerCase().startsWith("score:")) {
-const clean = line.replace(/score:/i,"").trim();
+// =========================
+// 🏒 SCORE
+// =========================
 
-if (clean.toLowerCase().includes("ot")) {
+if (
+line.toLowerCase().startsWith(
+"score:"
+)
+) {
+
+const clean =
+line.replace(/score:/i, "")
+.trim();
+
+if (
+clean.toLowerCase().includes(
+"ot"
+)
+) {
 resultType = "OT";
 }
 
-const m = clean.match(/(.+?)\s+(\d+)\s*-\s*(.+?)\s+(\d+)/);
+if (
+clean.toLowerCase().includes(
+"so"
+)
+) {
+resultType = "SO";
+}
+
+if (
+clean.toLowerCase().includes(
+"ff"
+)
+) {
+resultType = "FF";
+}
+
+const m = clean.match(
+/(.+?)\s+(\d+)\s*-\s*(.+?)\s+(\d+)/
+);
+
 if (m) {
-homeTeam=m[1]; homeScore=+m[2];
-awayTeam=m[3]; awayScore=+m[4];
+
+homeTeam = m[1].trim();
+homeScore = Number(m[2]);
+
+awayTeam = m[3].trim();
+awayScore = Number(m[4]);
 }
+
+continue;
 }
-
-if (line==="SKATERS") { mode="SKATERS"; continue; }
-if (line==="GOALIES") { mode="GOALIES"; continue; }
-
-if (!line.includes(":") && mode) { currentTeam=line; continue; }
-if (!line.includes(":")) continue;
-
-const [name, raw] = line.split(":").map(s=>s.trim());
 
 // =========================
-// 🧍 SKATER
+// 📂 MODES
 // =========================
-if (mode==="SKATERS") {
 
+if (line === "SKATERS") {
+mode = "SKATERS";
+continue;
+}
 
+if (line === "GOALIES") {
+mode = "GOALIES";
+continue;
+}
 
-const alreadyUnlinked = unlinked.some(r =>
-normalize(r[1]) === normalize(name)
+// =========================
+// 🏒 TEAM HEADER
+// =========================
+
+if (
+!line.includes(":") &&
+mode
+) {
+
+currentTeam = line.trim();
+continue;
+}
+
+// =========================
+// ⏭ SKIP BAD LINES
+// =========================
+
+if (!line.includes(":"))
+continue;
+
+const [name, raw] =
+line.split(":").map(
+s => s.trim()
 );
 
-if (!isPlayerLinked(name, linked) && !alreadyUnlinked) {
-await appendSheetValues("Unlinked Players!A:C", [
-[gameId, name, currentTeam]
-]);
-}
-
-const g=+(raw.match(/(\d+)G/)||[0,0])[1];
-const a=+(raw.match(/(\d+)A/)||[0,0])[1];
-const ta=+(raw.match(/(\d+)TA/)||[0,0])[1];
-const int=+(raw.match(/(\d+)INT/)||[0,0])[1];
-const bs=+(raw.match(/(\d+)BS/)||[0,0])[1];
-
-masterRows.push([gameId,name,currentTeam,g,a,bs,ta,int,null,null,null,null,null]);
-}
-
 // =========================
-// 🧤 GOALIE
+// 🧍 SKATERS
 // =========================
-if (mode==="GOALIES") {
 
+if (mode === "SKATERS") {
 
-
-const alreadyUnlinked = unlinked.some(r =>
-normalize(r[1]) === normalize(name)
+const alreadyUnlinked =
+unlinked.some(
+r =>
+normalize(r[1]) ===
+normalize(name)
 );
 
-if (!isPlayerLinked(name, linked) && !alreadyUnlinked) {
-await appendSheetValues("Unlinked Players!A:C", [
-[gameId, name, currentTeam]
-]);
+if (
+!isPlayerLinked(name, linked) &&
+!alreadyUnlinked
+) {
+
+await appendSheetValues(
+"Unlinked Players!A:C",
+[
+[
+gameId,
+name,
+currentTeam
+]
+]
+);
 }
 
-if (!/^\d+\/\d+/.test(raw)) continue;
+const g =
++(raw.match(/(\d+)G/) || [0,0])[1];
 
-const [saves,shots] = raw.match(/(\d+)\/(\d+)/).slice(1).map(Number);
-const ga = shots - saves;
+const a =
++(raw.match(/(\d+)A/) || [0,0])[1];
+
+const bs =
++(raw.match(/(\d+)BS/) || [0,0])[1];
+
+const ta =
++(raw.match(/(\d+)TA/) || [0,0])[1];
+
+const int =
++(raw.match(/(\d+)INT/) || [0,0])[1];
+
+// ONLY WRITE REAL STATS
+if (
+g > 0 ||
+a > 0 ||
+bs > 0 ||
+ta > 0 ||
+int > 0
+) {
 
 masterRows.push([
+
 gameId,
 name,
 currentTeam,
-null,null,null,null,null,
-saves,
-shots,
-raw.includes("W")?1:0,
-raw.includes("L")?1:0,
-ga===0?1:0
+
+g,
+a,
+bs,
+ta,
+int,
+
+"",
+"",
+"",
+"",
+""
+
 ]);
 }
 }
 
 // =========================
-// 💾 WRITE DATA
+// 🧤 GOALIES
 // =========================
-await appendSheetValues("Master Stats!A3:M", masterRows);
 
-await appendSheetValues("Game Results!A2:G", [[
+if (mode === "GOALIES") {
+
+const alreadyUnlinked =
+unlinked.some(
+r =>
+normalize(r[1]) ===
+normalize(name)
+);
+
+if (
+!isPlayerLinked(name, linked) &&
+!alreadyUnlinked
+) {
+
+await appendSheetValues(
+"Unlinked Players!A:C",
+[
+[
+gameId,
+name,
+currentTeam
+]
+]
+);
+}
+
+// MUST MATCH 10/12
+if (!/^\d+\/\d+/.test(raw))
+continue;
+
+const [
+saves,
+shots
+] = raw.match(
+/(\d+)\/(\d+)/
+)
+.slice(1)
+.map(Number);
+
+// ONLY REAL GOALIES
+if (shots > 0) {
+
+const ga =
+Math.max(
+0,
+shots - saves
+);
+
+masterRows.push([
+
+gameId,
+name,
+currentTeam,
+
+"",
+"",
+"",
+"",
+"",
+
+saves,
+shots,
+
+raw.includes("W")
+? 1 : 0,
+
+raw.includes("L")
+? 1 : 0,
+
+ga === 0
+? 1 : 0
+
+]);
+}
+}
+}
+
+// =========================
+// 💾 WRITE MASTER STATS
+// =========================
+
+if (masterRows.length) {
+
+await appendSheetValues(
+"Master Stats!A3:M",
+masterRows
+);
+}
+
+// =========================
+// 🏆 WRITE GAME RESULT
+// =========================
+
+await appendSheetValues(
+"Game Results!A2:G",
+[[
 gameId,
 homeTeam,
 awayTeam,
 homeScore,
 awayScore,
-homeScore>awayScore?homeTeam:awayTeam,
+
+homeScore > awayScore
+? homeTeam
+: awayTeam,
+
 resultType
-]]);
+]]
+);
+
+// =========================
+// 🔄 REBUILD EVERYTHING
+// =========================
 
 await rebuildAllStats();
+
 await rebuildStandings();
 
-postStandings(interaction.client);
-handleStatLeaders(interaction.client);
+await postStandings(
+interaction.client
+);
+
+await handleStatLeaders(
+interaction.client
+);
 
 // =========================
 // 🏒 GAME RECAP
 // =========================
+
 const recap = `__**Game #${gameId}**__
 **(H) ${homeTeam}** ${homeScore} - ${awayScore} **${awayTeam} (A)**
 
 ${recapNote}`;
 
-const channel = await interaction.client.channels.fetch(GAME_RESULTS_CHANNEL_ID);
+// =========================
+// 📡 SEND RECAP
+// =========================
 
-await channel.send({ content: recap.trim() });
+const channel =
+await interaction.client.channels.fetch(
+GAME_RESULTS_CHANNEL_ID
+);
 
+await channel.send({
+content: recap.trim()
+});
 
+// =========================
+// ✅ DONE
+// =========================
 
-return interaction.editReply("✅ Game recorded + recap posted");
-}
+return interaction.editReply(
+"✅ Game recorded + recap posted"
+);
+} 
 
 async function rebuildAllStats() {
 
-const master = await getSheetValues("Master Stats!A3:M1000");
+const master =
+await getSheetValues(
+"Master Stats!A3:M1000"
+);
 
 const players = {};
 const goalies = {};
 
+// =========================
+// 🔁 LOOP MASTER STATS
+// =========================
+
 for (const r of master) {
 
-const rawName = r[1];
+const rawName =
+String(r[1] || "").trim();
+
+if (!rawName) continue;
+
 const key = normalize(rawName);
-const team = r[2];
 
-const isSkater =
-r[3] !== "" &&
-r[3] !== null &&
-r[3] !== undefined;
-
-const isGoalie =
-r[8] !== "" &&
-r[8] !== null &&
-r[8] !== undefined;
+const team =
+String(r[2] || "").trim();
 
 // =========================
-// SKATERS
+// 📊 SKATER VALUES
+// =========================
+
+const goals =
+Number(r[3]) || 0;
+
+const assists =
+Number(r[4]) || 0;
+
+const blocks =
+Number(r[5]) || 0;
+
+const takeaways =
+Number(r[6]) || 0;
+
+const interceptions =
+Number(r[7]) || 0;
+
+// =========================
+// 🥅 GOALIE VALUES
+// =========================
+
+const saves =
+Number(r[8]) || 0;
+
+const shots =
+Number(r[9]) || 0;
+
+const wins =
+Number(r[10]) || 0;
+
+const losses =
+Number(r[11]) || 0;
+
+const shutouts =
+Number(r[12]) || 0;
+
+// =========================
+// 🎯 DETECT TYPES
+// =========================
+
+const isGoalie =
+shots > 0;
+
+const isSkater =
+goals > 0 ||
+assists > 0 ||
+blocks > 0 ||
+takeaways > 0 ||
+interceptions > 0;
+
+// =========================
+// 🧍 SKATERS
 // =========================
 
 if (isSkater && !isGoalie) {
 
 if (!players[key]) {
+
 players[key] = [
-rawName,
-team,
-0, // GP
-0, // G
-0, // A
-0, // P
-0, // BS
-0, // TA
-0 // INT
+rawName, // A Player
+team, // B Team
+
+0, // C GP
+0, // D Goals
+0, // E Assists
+0, // F Points
+
+0, // G BS
+0, // H TA
+0 // I INT
 ];
 }
 
-const goals = Number(r[3]) || 0;
-const assists = Number(r[4]) || 0;
+// ALWAYS KEEP LATEST TEAM
+players[key][1] = team;
 
+// GP
 players[key][2] += 1;
+
+// G
 players[key][3] += goals;
+
+// A
 players[key][4] += assists;
-players[key][5] += goals + assists;
-players[key][6] += Number(r[5]) || 0;
-players[key][7] += Number(r[6]) || 0;
-players[key][8] += Number(r[7]) || 0;
+
+// PTS
+players[key][5] =
+players[key][3] +
+players[key][4];
+
+// BS
+players[key][6] += blocks;
+
+// TA
+players[key][7] += takeaways;
+
+// INT
+players[key][8] += interceptions;
 }
 
 // =========================
-// GOALIES
+// 🧤 GOALIES
 // =========================
 
-if (isGoalie && !isSkater) {
+if (isGoalie) {
 
 if (!goalies[key]) {
 
 goalies[key] = {
 name: rawName,
 team,
+
 gp: 0,
 w: 0,
 l: 0,
+
 ga: 0,
+
 saves: 0,
 shots: 0,
+
 shutouts: 0
 };
 }
 
-const saves = Number(r[8]) || 0;
-const shots = Number(r[9]) || 0;
-const wins = Number(r[10]) || 0;
-const losses = Number(r[11]) || 0;
-const shutouts = Number(r[12]) || 0;
+// KEEP LATEST TEAM
+goalies[key].team = team;
 
-const ga = shots - saves;
+const ga =
+Math.max(0, shots - saves);
 
+// GP
 goalies[key].gp += 1;
+
+// W
 goalies[key].w += wins;
+
+// L
 goalies[key].l += losses;
+
+// GA
 goalies[key].ga += ga;
+
+// SAVES
 goalies[key].saves += saves;
+
+// SHOTS
 goalies[key].shots += shots;
+
+// SO
 goalies[key].shutouts += shutouts;
 }
 }
 
 // =========================
-// BUILD GOALIE VALUES
+// 🥅 BUILD GOALIE SHEET
 // =========================
 
-const goalieValues = Object.values(goalies).map(g => {
+const goalieValues =
+Object.values(goalies).map(g => {
 
 const svPct =
 g.shots > 0
@@ -530,45 +917,63 @@ g.gp > 0
 : "0.00";
 
 return [
+
 g.name,
 g.team,
+
 g.gp,
 g.w,
 g.l,
+
 g.ga,
+
 g.saves,
 g.shots,
+
 g.shutouts,
+
 svPct,
 gaa
 ];
 });
 
 // =========================
-// CLEAR SHEETS
+// 🗑 CLEAR SHEETS
 // =========================
 
 await sheets.spreadsheets.values.clear({
-spreadsheetId: process.env.SHEET_ID,
-range: "Player Stats!A3:I"
+spreadsheetId:
+process.env.SHEET_ID,
+
+range:
+"Player Stats!A3:I"
 });
 
 await sheets.spreadsheets.values.clear({
-spreadsheetId: process.env.SHEET_ID,
-range: "Goalie Stats!A3:K"
+spreadsheetId:
+process.env.SHEET_ID,
+
+range:
+"Goalie Stats!A3:K"
 });
 
 // =========================
-// UPDATE SHEETS
+// 📤 WRITE PLAYERS
 // =========================
 
-if (Object.values(players).length) {
+if (
+Object.values(players).length
+) {
 
 await updateSheetValues(
 "Player Stats!A3:I",
 Object.values(players)
 );
 }
+
+// =========================
+// 📤 WRITE GOALIES
+// =========================
 
 if (goalieValues.length) {
 
@@ -577,6 +982,10 @@ await updateSheetValues(
 goalieValues
 );
 }
+
+console.log(
+"✅ Rebuilt all stats."
+);
 }
 
   
