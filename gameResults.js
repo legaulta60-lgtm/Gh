@@ -199,7 +199,7 @@ img[`${prefix}LOGO${i+1}`] = logo;
 // =========================
 
 fill(top(players, "PTS"), "PTS", "P");
-fill(top(players, "G"), "G", "G");
+fill(top(players, "G"), "G", "GO");
 fill(top(players, "A"), "A", "A");
 fill(top(players, "BS"), "BS", "B");
 fill(top(players, "TA"), "TA", "T");
