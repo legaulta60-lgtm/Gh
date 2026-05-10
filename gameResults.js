@@ -1152,21 +1152,31 @@ return interaction.editReply("❌ Error fetching unlinked players.");
 }  
 
 async function handleMyStats(interaction) {
+
 try {
+
 await interaction.deferReply();
 
-const userId = interaction.user.id;
+const userId =
+interaction.user.id;
 
 // =========================
-// 🔗 GET LINKED PLAYER
+// 🔗 LINKED PLAYER
 // =========================
-const linkedRows = await getSheetValues("Linked Players!A2:D1000");
+
+const linkedRows =
+await getSheetValues(
+"Linked Players!A2:D1000"
+);
 
 const link = linkedRows.find(
-row => String(row[0]) === String(userId)
+row =>
+String(row[0]) ===
+String(userId)
 );
 
 if (!link) {
+
 return interaction.editReply(
 "❌ You are not linked. Use /linkplayer first."
 );
@@ -1175,41 +1185,72 @@ return interaction.editReply(
 const playerName = link[2];
 
 // =========================
-// 📊 GET STATS
+// 📊 LOAD STATS
 // =========================
-const playerRows = await getSheetValues("Player Stats!A3:I1000");
-const goalieRows = await getSheetValues("Goalie Stats!A3:I1000");
 
-// 🔥 FIXED NORMALIZATION
-const skater = playerRows.find(r =>
-normalize(r[0]) === normalize(playerName)
+const playerRows =
+await getSheetValues(
+"Player Stats!A3:I1000"
 );
 
-const goalie = goalieRows.find(r =>
-normalize(r[0]) === normalize(playerName)
+const goalieRows =
+await getSheetValues(
+"Goalie Stats!A3:K1000"
+);
+
+// =========================
+// 🔎 FIND PLAYER
+// =========================
+
+const skater = playerRows.find(
+r =>
+normalize(r[0]) ===
+normalize(playerName)
+);
+
+const goalie = goalieRows.find(
+r =>
+normalize(r[0]) ===
+normalize(playerName)
 );
 
 // =========================
 // 🏒 TEAM
 // =========================
+
 const team = (
+
 link?.[3] ||
 skater?.[1] ||
 goalie?.[1] ||
 ""
+
 ).trim();
 
 // =========================
-// 🧮 SKATER STATS
+// 🧍 SKATER STATS
 // =========================
-const gp = Number(skater?.[2]) || 0;
-const g = Number(skater?.[3]) || 0;
-const a = Number(skater?.[4]) || 0;
-const pts = Number(skater?.[5]) || 0;
 
-const bs = Number(skater?.[6]) || 0;
-const ta = Number(skater?.[7]) || 0;
-const int = Number(skater?.[8]) || 0;
+const gp =
+Number(skater?.[2]) || 0;
+
+const g =
+Number(skater?.[3]) || 0;
+
+const a =
+Number(skater?.[4]) || 0;
+
+const pts =
+Number(skater?.[5]) || 0;
+
+const bs =
+Number(skater?.[6]) || 0;
+
+const ta =
+Number(skater?.[7]) || 0;
+
+const int =
+Number(skater?.[8]) || 0;
 
 const ppg =
 gp > 0
@@ -1219,28 +1260,45 @@ gp > 0
 // =========================
 // 🧤 GOALIE STATS
 // =========================
-const ggp = Number(goalie?.[2]) || 0;
-const w = Number(goalie?.[3]) || 0;
-const l = Number(goalie?.[4]) || 0;
 
-const saves = Number(goalie?.[6]) || 0;
-const shots = Number(goalie?.[7]) || 0;
+const ggp =
+Number(goalie?.[2]) || 0;
 
+const w =
+Number(goalie?.[3]) || 0;
+
+const l =
+Number(goalie?.[4]) || 0;
+
+const ga =
+Number(goalie?.[5]) || 0;
+
+const saves =
+Number(goalie?.[6]) || 0;
+
+const shots =
+Number(goalie?.[7]) || 0;
+
+const so =
+Number(goalie?.[8]) || 0;
+
+// 🔥 NOW CORRECT COLUMNS
 const sv =
-shots > 0
-? (saves / shots).toFixed(3)
-: "0.000";
+goalie?.[9] || "0.000";
 
-const gaa = Number(goalie?.[5]) || 0;
-const so = Number(goalie?.[8]) || 0;
+const gaa =
+goalie?.[10] || "0.00";
 
 // =========================
 // 🧾 TEMPLATE VALUES
 // =========================
+
 const rep = {
+
 PLAYER: playerName,
 TEAM: team,
 
+// SKATER
 GP: gp,
 G: g,
 A: a,
@@ -1252,9 +1310,16 @@ INT: int,
 
 PPG: ppg,
 
+// GOALIE
 GGP: ggp,
+
 W: w,
 L: l,
+
+GA: ga,
+
+SAVES: saves,
+SHOTS: shots,
 
 SV: sv,
 GAA: gaa,
@@ -1264,21 +1329,37 @@ SO: so
 // =========================
 // 🖼️ TEAM LOGO
 // =========================
+
 const imageReplacements = {};
 
-const logoKey = Object.keys(TEAM_LOGOS).find(
-key => normalize(key) === normalize(team)
-);
-
-const fallbackKey = Object.keys(TEAM_LOGOS).find(
+const logoKey =
+Object.keys(TEAM_LOGOS).find(
 key =>
-normalize(key).includes(normalize(team)) ||
-normalize(team).includes(normalize(key))
+normalize(key) ===
+normalize(team)
 );
 
-const finalKey = logoKey || fallbackKey;
+const fallbackKey =
+Object.keys(TEAM_LOGOS).find(
+key =>
 
-if (finalKey && TEAM_LOGOS[finalKey]) {
+normalize(key).includes(
+normalize(team)
+) ||
+
+normalize(team).includes(
+normalize(key)
+)
+);
+
+const finalKey =
+logoKey || fallbackKey;
+
+if (
+finalKey &&
+TEAM_LOGOS[finalKey]
+) {
+
 imageReplacements.TEAM_LOGO =
 TEAM_LOGOS[finalKey];
 }
@@ -1286,14 +1367,25 @@ TEAM_LOGOS[finalKey];
 // =========================
 // 🖼️ GENERATE IMAGE
 // =========================
-const image = await createImageFromTemplate(
+
+const image =
+await createImageFromTemplate(
+
 process.env.MYSTATS_TEMPLATE_ID,
+
 rep,
+
 "mystats.png",
+
 imageReplacements
 );
 
+// =========================
+// 📤 SEND
+// =========================
+
 return interaction.editReply({
+
 files: [
 {
 attachment: image,
@@ -1303,6 +1395,7 @@ name: "mystats.png"
 });
 
 } catch (err) {
+
 console.error(err);
 
 return interaction.editReply(
@@ -1311,6 +1404,8 @@ return interaction.editReply(
 }
 }
 
+
+  
 return {
 handleGameResults,
 handleLinkPlayer,
