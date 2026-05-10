@@ -420,133 +420,99 @@ return interaction.editReply("✅ Game recorded + recap posted");
 }
 
 async function rebuildAllStats() {
-
-const master = await getSheetValues("Master Stats!A3:M1000");
+const master = await getSheetValues("Master Stats!A2:M1000");
 
 const players = {};
 const goalies = {};
 
 for (const r of master) {
 
-const rawName = String(r[1] || "").trim();
+const rawName = r[1];
 if (!rawName) continue;
 
 const key = normalize(rawName);
+const team = r[2];
 
-const team = String(r[2] || "").trim();
+// MASTER STATS COLUMNS
+const goals = Number(r[3]) || 0;
+const assists = Number(r[4]) || 0;
+const blocks = Number(r[5]) || 0;
+const takeaways = Number(r[6]) || 0;
+const interceptions = Number(r[7]) || 0;
 
-// =========================
-// DETECT TYPES
-// =========================
-const isSkater =
-r[3] !== "" &&
-r[3] !== null &&
-r[3] !== undefined;
+const saves = Number(r[8]) || 0;
+const shotsAgainst = Number(r[9]) || 0;
 
-const isGoalie =
-r[8] !== "" &&
-r[8] !== null &&
-r[8] !== undefined;
+const wins = Number(r[10]) || 0;
+const losses = Number(r[11]) || 0;
+const shutouts = Number(r[12]) || 0;
+
+const isGoalie = shotsAgainst > 0;
+const isSkater = !isGoalie;
 
 // =========================
 // SKATERS
 // =========================
-if (isSkater && !isGoalie) {
+
+if (isSkater) {
 
 if (!players[key]) {
 players[key] = [
-rawName, // display name
-team,
-0, // GP
-0, // G
-0, // A
-0, // PTS
-0, // BS
-0, // TA
-0 // INT
+rawName, // A Player
+team, // B Team
+0, // C GP
+0, // D Goals
+0, // E Assists
+0, // F Points
+0, // G Blocks
+0, // H Takeaways
+0 // I Interceptions
 ];
 }
 
-// ALWAYS UPDATE TO MOST RECENT TEAM
-players[key][1] = team;
-
-// GP
 players[key][2] += 1;
-
-// GOALS
-players[key][3] += Number(r[3]) || 0;
-
-// ASSISTS
-players[key][4] += Number(r[4]) || 0;
-
-// POINTS
-players[key][5] =
-players[key][3] +
-players[key][4];
-
-// BLOCKED SHOTS
-players[key][6] += Number(r[5]) || 0;
-
-// TAKEAWAYS
-players[key][7] += Number(r[6]) || 0;
-
-// INTERCEPTIONS
-players[key][8] += Number(r[7]) || 0;
+players[key][3] += goals;
+players[key][4] += assists;
+players[key][5] += goals + assists;
+players[key][6] += blocks;
+players[key][7] += takeaways;
+players[key][8] += interceptions;
 }
 
 // =========================
 // GOALIES
 // =========================
-if (isGoalie && !isSkater) {
+
+if (isGoalie) {
 
 if (!goalies[key]) {
 goalies[key] = [
-rawName, // display name
-team,
-0, // GP
-0, // W
-0, // L
-0, // GA
-0, // SAVES
-0, // SHOTS
-0 // SO
+rawName, // A Player
+team, // B Team
+0, // C GP
+0, // D W
+0, // E L
+0, // F GA
+0, // G Saves
+0, // H Shots Against
+0 // I Shutouts
 ];
 }
 
-// ALWAYS UPDATE TEAM
-goalies[key][1] = team;
+const ga = shotsAgainst - saves;
 
-const saves = Number(r[8]) || 0;
-const shots = Number(r[9]) || 0;
-
-const ga = Math.max(0, shots - saves);
-
-// GP
 goalies[key][2] += 1;
-
-// WINS
-goalies[key][3] += Number(r[10]) || 0;
-
-// LOSSES
-goalies[key][4] += Number(r[11]) || 0;
-
-// GOALS AGAINST
+goalies[key][3] += wins;
+goalies[key][4] += losses;
 goalies[key][5] += ga;
-
-// SAVES
 goalies[key][6] += saves;
-
-// SHOTS
-goalies[key][7] += shots;
-
-// SHUTOUTS
-goalies[key][8] += Number(r[12]) || 0;
+goalies[key][7] += shotsAgainst;
+goalies[key][8] += shutouts;
 }
 }
 
-// =========================
 // CLEAR SHEETS
-// =========================
+
 await sheets.spreadsheets.values.clear({
 spreadsheetId: process.env.SHEET_ID,
 range: "Player Stats!A3:I"
@@ -557,9 +523,8 @@ spreadsheetId: process.env.SHEET_ID,
 range: "Goalie Stats!A3:I"
 });
 
-// =========================
-// WRITE PLAYERS
-// =========================
+// REWRITE PLAYER STATS
+
 if (Object.values(players).length) {
 await updateSheetValues(
 "Player Stats!A3:I",
@@ -567,17 +532,17 @@ Object.values(players)
 );
 }
 
-// =========================
-// WRITE GOALIES
-// =========================
+// REWRITE GOALIE STATS
+
 if (Object.values(goalies).length) {
 await updateSheetValues(
 "Goalie Stats!A3:I",
 Object.values(goalies)
 );
 }
-}
 
+console.log("Rebuilt all stats.");
+}
 async function handleLinkPlayer(interaction) {
 try {
 await interaction.deferReply();
