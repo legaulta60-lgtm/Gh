@@ -420,60 +420,133 @@ return interaction.editReply("✅ Game recorded + recap posted");
 }
 
 async function rebuildAllStats() {
+
 const master = await getSheetValues("Master Stats!A3:M1000");
 
 const players = {};
 const goalies = {};
 
 for (const r of master) {
-const rawName = r[1];
+
+const rawName = String(r[1] || "").trim();
+if (!rawName) continue;
+
 const key = normalize(rawName);
-const team = r[2];
-  
-if (!players[key]) {
-  players[key] = [rawName, team, 0,0,0,0,0,0,0];
-}
-  
 
-const isSkater = r[3] !== "" && r[3] !== null && r[3] !== undefined;
-const isGoalie = r[8] !== "" && r[8] !== null && r[8] !== undefined;
+const team = String(r[2] || "").trim();
 
-// SKATER
+// =========================
+// DETECT TYPES
+// =========================
+const isSkater =
+r[3] !== "" &&
+r[3] !== null &&
+r[3] !== undefined;
+
+const isGoalie =
+r[8] !== "" &&
+r[8] !== null &&
+r[8] !== undefined;
+
+// =========================
+// SKATERS
+// =========================
 if (isSkater && !isGoalie) {
+
 if (!players[key]) {
-players[key] = [key, team, 0,0,0,0,0,0,0];
+players[key] = [
+rawName, // display name
+team,
+0, // GP
+0, // G
+0, // A
+0, // PTS
+0, // BS
+0, // TA
+0 // INT
+];
 }
 
+// ALWAYS UPDATE TO MOST RECENT TEAM
+players[key][1] = team;
+
+// GP
 players[key][2] += 1;
+
+// GOALS
 players[key][3] += Number(r[3]) || 0;
+
+// ASSISTS
 players[key][4] += Number(r[4]) || 0;
-players[key][5] += (Number(r[3]) + Number(r[4])) || 0;
+
+// POINTS
+players[key][5] =
+players[key][3] +
+players[key][4];
+
+// BLOCKED SHOTS
 players[key][6] += Number(r[5]) || 0;
+
+// TAKEAWAYS
 players[key][7] += Number(r[6]) || 0;
+
+// INTERCEPTIONS
 players[key][8] += Number(r[7]) || 0;
 }
 
-// GOALIE
+// =========================
+// GOALIES
+// =========================
 if (isGoalie && !isSkater) {
+
 if (!goalies[key]) {
-goalies[key] = [key, team, 0,0,0,0,0,0,0];
+goalies[key] = [
+rawName, // display name
+team,
+0, // GP
+0, // W
+0, // L
+0, // GA
+0, // SAVES
+0, // SHOTS
+0 // SO
+];
 }
+
+// ALWAYS UPDATE TEAM
+goalies[key][1] = team;
 
 const saves = Number(r[8]) || 0;
 const shots = Number(r[9]) || 0;
-const ga = shots - saves;
 
+const ga = Math.max(0, shots - saves);
+
+// GP
 goalies[key][2] += 1;
+
+// WINS
 goalies[key][3] += Number(r[10]) || 0;
+
+// LOSSES
 goalies[key][4] += Number(r[11]) || 0;
+
+// GOALS AGAINST
 goalies[key][5] += ga;
+
+// SAVES
 goalies[key][6] += saves;
+
+// SHOTS
 goalies[key][7] += shots;
+
+// SHUTOUTS
 goalies[key][8] += Number(r[12]) || 0;
 }
 }
 
-// 🔥 THESE MUST BE AFTER THE LOOP
+// =========================
+// CLEAR SHEETS
+// =========================
 await sheets.spreadsheets.values.clear({
 spreadsheetId: process.env.SHEET_ID,
 range: "Player Stats!A3:I"
@@ -484,12 +557,24 @@ spreadsheetId: process.env.SHEET_ID,
 range: "Goalie Stats!A3:I"
 });
 
+// =========================
+// WRITE PLAYERS
+// =========================
 if (Object.values(players).length) {
-await updateSheetValues("Player Stats!A3:I", Object.values(players));
+await updateSheetValues(
+"Player Stats!A3:I",
+Object.values(players)
+);
 }
 
+// =========================
+// WRITE GOALIES
+// =========================
 if (Object.values(goalies).length) {
-await updateSheetValues("Goalie Stats!A3:I", Object.values(goalies));
+await updateSheetValues(
+"Goalie Stats!A3:I",
+Object.values(goalies)
+);
 }
 }
 
