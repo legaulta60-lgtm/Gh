@@ -110,7 +110,7 @@ G: Number(r[3]) || 0,
 A: Number(r[4]) || 0,
 PTS: Number(r[5]) || 0,
 
-BS: Number(r[6]) || 0,
+HITS: Number(r[6]) || 0,
 TA: Number(r[7]) || 0,
 INT: Number(r[8]) || 0
 }));
@@ -201,7 +201,7 @@ img[`${prefix}LOGO${i+1}`] = logo;
 fill(top(players, "PTS"), "PTS", "P");
 fill(top(players, "G"), "G", "GO");
 fill(top(players, "A"), "A", "A");
-fill(top(players, "BS"), "BS", "B");
+fill(top(players, "H"), "H", "H");
 fill(top(players, "TA"), "TA", "T");
 fill(top(players, "INT"), "INT", "I");
 
@@ -516,8 +516,8 @@ const g =
 const a =
 +(raw.match(/(\d+)A/) || [0,0])[1];
 
-const bs =
-+(raw.match(/(\d+)BS/) || [0,0])[1];
+const hits =
++(raw.match(/(\d+)HIT/) || [0,0])[1];
 
 const ta =
 +(raw.match(/(\d+)TA/) || [0,0])[1];
@@ -529,7 +529,7 @@ const int =
 if (
 g > 0 ||
 a > 0 ||
-bs > 0 ||
+hits > 0 ||
 ta > 0 ||
 int > 0
 ) {
@@ -542,7 +542,7 @@ currentTeam,
 
 g,
 a,
-bs,
+hits,
 ta,
 int,
 
@@ -753,7 +753,7 @@ Number(r[3]) || 0;
 const assists =
 Number(r[4]) || 0;
 
-const blocks =
+const hits =
 Number(r[5]) || 0;
 
 const takeaways =
@@ -791,7 +791,7 @@ shots > 0;
 const isSkater =
 goals > 0 ||
 assists > 0 ||
-blocks > 0 ||
+hits > 0 ||
 takeaways > 0 ||
 interceptions > 0;
 
@@ -812,7 +812,7 @@ team, // B Team
 0, // E Assists
 0, // F Points
 
-0, // G BS
+0, // G HITS
 0, // H TA
 0 // I INT
 ];
@@ -835,8 +835,8 @@ players[key][5] =
 players[key][3] +
 players[key][4];
 
-// BS
-players[key][6] += blocks;
+// HITS
+players[key][6] += hits;
 
 // TA
 players[key][7] += takeaways;
@@ -1243,7 +1243,7 @@ Number(skater?.[4]) || 0;
 const pts =
 Number(skater?.[5]) || 0;
 
-const bs =
+const hits =
 Number(skater?.[6]) || 0;
 
 const ta =
@@ -1304,7 +1304,7 @@ G: g,
 A: a,
 PTS: pts,
 
-BS: bs,
+HITS: hits,
 TA: ta,
 INT: int,
 
