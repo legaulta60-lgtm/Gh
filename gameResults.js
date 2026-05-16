@@ -1304,7 +1304,7 @@ G: g,
 A: a,
 PTS: pts,
 
-HITS: hits,
+H: hits,
 TA: ta,
 INT: int,
 
