@@ -300,19 +300,35 @@ return interaction.editReply("❌ Error loading team stats.");
 
 async function rebuildStandings() {
 
-// 🔥 UPDATED RANGE (NOW INCLUDES RESULT TYPE)
-const results = await getSheetValues("Game Results!A2:G");
+// =========================
+// 📥 LOAD DATA
+// =========================
 
-let standings = await getSheetValues("Standings!K2:S50");
+const results =
+await getSheetValues(
+"Game Results!A2:G1000"
+);
 
-// reset stats
+let standings =
+await getSheetValues(
+"Standings!K2:S50"
+);
+
+// =========================
+// 🔄 RESET STANDINGS
+// =========================
+
 standings = standings.map(row => [
-row[0], // TEAM
+
+String(row[0] || "").trim(), // TEAM
+
 0, // GP
 0, // W
 0, // L
 0, // OT
+
 0, // PTS
+
 0, // GF
 0, // GA
 0 // DIFF
@@ -321,70 +337,193 @@ row[0], // TEAM
 // =========================
 // 🔧 UPDATE TEAM
 // =========================
-function updateTeam(teamName, gf, ga, isWin, resultType) {
+
+function updateTeam(
+teamName,
+gf,
+ga,
+isWin,
+resultType
+) {
 
 for (let i = 0; i < standings.length; i++) {
 
-if (normalize(standings[i][0]) === normalize(teamName)) {
+if (
+normalize(standings[i][0]) ===
+normalize(teamName)
+) {
 
-standings[i][1] += 1; // GP
+
+// GP
+standings[i][1] += 1;
+
+// =========================
+// 🏆 WIN
+// =========================
 
 if (isWin) {
+
 standings[i][2] += 1; // W
-standings[i][5] += 2; // +2 pts
+standings[i][5] += 2; // PTS
+
+}
+
+// =========================
+// ❌ LOSS
+// =========================
+
+else {
+
+if (
+String(resultType).trim()
+.toUpperCase() === "OT"
+) {
+
+standings[i][4] += 1; // OTL
+standings[i][5] += 1; // OT POINT
+
 } else {
 
-if (resultType === "OT") {
-standings[i][4] += 1; // OT LOSS
-standings[i][5] += 1; // +1 pt
-} else {
 standings[i][3] += 1; // REG LOSS
-}
 
 }
 
+}
+
+// GF
 standings[i][6] += gf;
+
+// GA
 standings[i][7] += ga;
-standings[i][8] = standings[i][6] - standings[i][7];
+
+// DIFF
+standings[i][8] =
+standings[i][6] -
+standings[i][7];
+
+break;
 }
 }
 }
 
 // =========================
-// 🔁 PROCESS RESULTS
+// 🔁 PROCESS GAMES
 // =========================
+
 for (const row of results) {
 
-const [id, home, away, homeScore, awayScore, winner, resultType] = row;
+const [
+id,
+home,
+away,
+homeScore,
+awayScore,
+winner,
+resultType
+] = row;
 
-const h = Number(homeScore);
-const a = Number(awayScore);
+const h =
+Number(homeScore);
 
-// skip bad rows
-if (!home || !away || isNaN(h) || isNaN(a)) continue;
+const a =
+Number(awayScore);
 
-updateTeam(home, h, a, h > a, resultType);
-updateTeam(away, a, h, a > h, resultType);
+// =========================
+// ⛔ SKIP BAD ROWS
+// =========================
+
+if (
+!home ||
+!away ||
+isNaN(h) ||
+isNaN(a)
+) continue;
+
+// =========================
+// 🏠 HOME WIN?
+// =========================
+
+const homeWon =
+
+normalize(winner) ===
+normalize(home);
+
+// =========================
+// ✈️ AWAY WIN?
+// =========================
+
+const awayWon =
+
+normalize(winner) ===
+normalize(away);
+
+// =========================
+// 📊 UPDATE BOTH TEAMS
+// =========================
+
+updateTeam(
+home,
+h,
+a,
+homeWon,
+resultType
+);
+
+updateTeam(
+away,
+a,
+h,
+awayWon,
+resultType
+);
 }
 
 // =========================
-// 📊 SORT STANDINGS
+// 📈 SORT STANDINGS
 // =========================
+
 standings.sort((a, b) => {
-if (b[5] !== a[5]) return b[5] - a[5]; // PTS
-if (b[8] !== a[8]) return b[8] - a[8]; // DIFF
-return b[6] - a[6]; // GF
+
+// PTS
+if (b[5] !== a[5]) {
+return b[5] - a[5];
+}
+
+// DIFF
+if (b[8] !== a[8]) {
+return b[8] - a[8];
+}
+
+// GF
+return b[6] - a[6];
+});
+
+// =========================
+// 🗑 CLEAR SHEET
+// =========================
+
+await sheets.spreadsheets.values.clear({
+
+spreadsheetId:
+process.env.SHEET_ID,
+
+range:
+"Standings!K2:S50"
 });
 
 // =========================
 // 💾 SAVE
 // =========================
-await sheets.spreadsheets.values.clear({
-spreadsheetId: process.env.SHEET_ID,
-range: "Standings!K2:S50",
-});
 
-await updateSheetValues("Standings!K2:S50", standings);
+await updateSheetValues(
+"Standings!K2:S50",
+standings
+);
+
+console.log(
+"✅ Rebuilt standings."
+);
+
 }
 
 
