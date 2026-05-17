@@ -517,7 +517,7 @@ const a =
 +(raw.match(/(\d+)A/) || [0,0])[1];
 
 const hits =
-+(raw.match(/(\d+)HIT/) || [0,0])[1];
++(raw.match(/(\d+)H/) || [0,0])[1];
 
 const ta =
 +(raw.match(/(\d+)TA/) || [0,0])[1];
