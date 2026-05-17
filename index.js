@@ -301,13 +301,17 @@ return interaction.editReply("❌ Error loading team stats.");
 async function rebuildStandings() {
 
 // =========================
-// 📥 LOAD DATA
+// 📥 LOAD GAME RESULTS
 // =========================
 
 const results =
 await getSheetValues(
 "Game Results!A2:G1000"
 );
+
+// =========================
+// 📥 LOAD TEAMS
+// =========================
 
 let standings =
 await getSheetValues(
@@ -320,18 +324,18 @@ await getSheetValues(
 
 standings = standings.map(row => [
 
-String(row[0] || "").trim(), // TEAM
+String(row[0] || "").trim(), // K TEAM
 
-0, // GP
-0, // W
-0, // L
-0, // OT
+0, // L GP
+0, // M W
+0, // N L
+0, // O OTL
 
-0, // PTS
+0, // P PTS
 
-0, // GF
-0, // GA
-0 // DIFF
+0, // Q GF
+0, // R GA
+0 // S DIFF
 ]);
 
 // =========================
@@ -354,11 +358,15 @@ normalize(teamName)
 ) {
 
 
+// =========================
 // GP
+// =========================
+
 standings[i][1] += 1;
 
+
 // =========================
-// 🏆 WIN
+// WIN
 // =========================
 
 if (isWin) {
@@ -368,21 +376,25 @@ standings[i][5] += 2; // PTS
 
 }
 
+
 // =========================
-// ❌ LOSS
+// LOSS
 // =========================
 
 else {
 
 if (
-String(resultType).trim()
+String(resultType)
+.trim()
 .toUpperCase() === "OT"
 ) {
 
 standings[i][4] += 1; // OTL
 standings[i][5] += 1; // OT POINT
 
-} else {
+}
+
+else {
 
 standings[i][3] += 1; // REG LOSS
 
@@ -390,18 +402,25 @@ standings[i][3] += 1; // REG LOSS
 
 }
 
-// GF
-standings[i][6] += gf;
 
-// GA
+// =========================
+// GOALS FOR / AGAINST
+// =========================
+
+standings[i][6] += gf;
 standings[i][7] += ga;
 
+
+// =========================
 // DIFF
+// =========================
+
 standings[i][8] =
 standings[i][6] -
 standings[i][7];
 
 break;
+
 }
 }
 }
@@ -429,7 +448,7 @@ const a =
 Number(awayScore);
 
 // =========================
-// ⛔ SKIP BAD ROWS
+// SKIP EMPTY ROWS
 // =========================
 
 if (
@@ -439,8 +458,9 @@ isNaN(h) ||
 isNaN(a)
 ) continue;
 
+
 // =========================
-// 🏠 HOME WIN?
+// DETERMINE WINNER
 // =========================
 
 const homeWon =
@@ -448,17 +468,14 @@ const homeWon =
 normalize(winner) ===
 normalize(home);
 
-// =========================
-// ✈️ AWAY WIN?
-// =========================
-
 const awayWon =
 
 normalize(winner) ===
 normalize(away);
 
+
 // =========================
-// 📊 UPDATE BOTH TEAMS
+// UPDATE HOME
 // =========================
 
 updateTeam(
@@ -469,6 +486,11 @@ homeWon,
 resultType
 );
 
+
+// =========================
+// UPDATE AWAY
+// =========================
+
 updateTeam(
 away,
 a,
@@ -476,15 +498,17 @@ h,
 awayWon,
 resultType
 );
+
 }
 
+
 // =========================
-// 📈 SORT STANDINGS
+// 📊 SORT STANDINGS
 // =========================
 
 standings.sort((a, b) => {
 
-// PTS
+// POINTS
 if (b[5] !== a[5]) {
 return b[5] - a[5];
 }
@@ -496,10 +520,12 @@ return b[8] - a[8];
 
 // GF
 return b[6] - a[6];
+
 });
 
+
 // =========================
-// 🗑 CLEAR SHEET
+// 🗑 CLEAR OLD STANDINGS
 // =========================
 
 await sheets.spreadsheets.values.clear({
@@ -509,10 +535,12 @@ process.env.SHEET_ID,
 
 range:
 "Standings!K2:S50"
+
 });
 
+
 // =========================
-// 💾 SAVE
+// 💾 SAVE NEW STANDINGS
 // =========================
 
 await updateSheetValues(
