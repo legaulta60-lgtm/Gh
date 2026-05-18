@@ -283,7 +283,7 @@ top(players, "PTS"),
 fill(
 top(players, "G"),
 "G",
-"G"
+"GO"
 );
 
 fill(
@@ -295,7 +295,7 @@ top(players, "A"),
 fill(
 top(players, "H"),
 "H",
-"B"
+"H"
 );
 
 fill(
