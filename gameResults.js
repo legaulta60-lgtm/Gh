@@ -319,18 +319,25 @@ async function handleGameResults(interaction) {
 
 await interaction.deferReply();
 
-const input =
-interaction.options.getString("input");
+// =========================
+// 📥 INPUT
+// =========================
 
-const lines =
-input.split("\n").map(
-l => l.trim()
+const input =
+interaction.options.getString(
+"input"
 );
 
 const recapNote =
 interaction.options.getString(
 "recap"
 ) || "";
+
+const lines =
+input
+.split("\n")
+.map(l => l.trim())
+.filter(Boolean);
 
 // =========================
 // 📄 SHEET DATA
@@ -350,13 +357,16 @@ await getSheetValues(
 // 🎮 GAME INFO
 // =========================
 
-let gameId = Date.now();
+let gameId =
+Date.now();
 
 let homeTeam = "";
 let awayTeam = "";
 
 let homeScore = 0;
 let awayScore = 0;
+
+let winner = "";
 
 let resultType = "REG";
 
@@ -372,17 +382,17 @@ const masterRows = [];
 for (const line of lines) {
 
 // =========================
-// 🎮 GAME ID
+// 🎮 GAME NUMBER
 // =========================
 
 if (
-line.toLowerCase().startsWith(
-"game:"
-)
+line.toLowerCase()
+.startsWith("game:")
 ) {
 
 gameId =
-line.split(":")[1].trim();
+line.split(":")[1]
+.trim();
 
 continue;
 }
@@ -392,38 +402,42 @@ continue;
 // =========================
 
 if (
-line.toLowerCase().startsWith(
-"score:"
-)
+line.toLowerCase()
+.startsWith("score:")
 ) {
 
 const clean =
-line.replace(/score:/i, "")
+line
+.replace(/score:/i, "")
 .trim();
 
+// =========================
+// RESULT TYPE
+// =========================
+
+resultType = "REG";
+
 if (
-clean.toLowerCase().includes(
-"ot"
-)
+/\bOT\b/i.test(clean)
 ) {
 resultType = "OT";
 }
 
 if (
-clean.toLowerCase().includes(
-"so"
-)
+/\bSO\b/i.test(clean)
 ) {
 resultType = "SO";
 }
 
 if (
-clean.toLowerCase().includes(
-"ff"
-)
+/\bFF\b/i.test(clean)
 ) {
 resultType = "FF";
 }
+
+// =========================
+// SCORE REGEX
+// =========================
 
 const m = clean.match(
 /(.+?)\s+(\d+)\s*-\s*(.+?)\s+(\d+)/
@@ -431,11 +445,22 @@ const m = clean.match(
 
 if (m) {
 
-homeTeam = m[1].trim();
-homeScore = Number(m[2]);
+homeTeam =
+m[1].trim();
 
-awayTeam = m[3].trim();
-awayScore = Number(m[4]);
+homeScore =
+Number(m[2]);
+
+awayTeam =
+m[3].trim();
+
+awayScore =
+Number(m[4]);
+
+winner =
+homeScore > awayScore
+? homeTeam
+: awayTeam;
 }
 
 continue;
@@ -446,17 +471,21 @@ continue;
 // =========================
 
 if (line === "SKATERS") {
+
 mode = "SKATERS";
 continue;
+
 }
 
 if (line === "GOALIES") {
+
 mode = "GOALIES";
 continue;
+
 }
 
 // =========================
-// 🏒 TEAM HEADER
+// 🏒 TEAM HEADERS
 // =========================
 
 if (
@@ -464,27 +493,32 @@ if (
 mode
 ) {
 
-currentTeam = line.trim();
+currentTeam =
+line.trim();
+
 continue;
 }
 
 // =========================
-// ⏭ SKIP BAD LINES
+// ⛔ BAD LINE
 // =========================
 
 if (!line.includes(":"))
 continue;
 
 const [name, raw] =
-line.split(":").map(
-s => s.trim()
-);
+line.split(":")
+.map(s => s.trim());
 
 // =========================
 // 🧍 SKATERS
 // =========================
 
 if (mode === "SKATERS") {
+
+// =========================
+// UNLINKED CHECK
+// =========================
 
 const alreadyUnlinked =
 unlinked.some(
@@ -494,7 +528,10 @@ normalize(name)
 );
 
 if (
-!isPlayerLinked(name, linked) &&
+!isPlayerLinked(
+name,
+linked
+) &&
 !alreadyUnlinked
 ) {
 
@@ -508,31 +545,41 @@ currentTeam
 ]
 ]
 );
+
 }
 
+// =========================
+// PARSE STATS
+// =========================
+
 const g =
-+(raw.match(/(\d+)G/) || [0,0])[1];
++(raw.match(
+/(\d+)G\b/
+) || [0,0])[1];
 
 const a =
-+(raw.match(/(\d+)A/) || [0,0])[1];
++(raw.match(
+/(\d+)A\b/
+) || [0,0])[1];
 
 const hits =
-+(raw.match(/(\d+)H/) || [0,0])[1];
++(raw.match(
+/(\d+)H\b/
+) || [0,0])[1];
 
 const ta =
-+(raw.match(/(\d+)TA/) || [0,0])[1];
++(raw.match(
+/(\d+)TA\b/
+) || [0,0])[1];
 
 const int =
-+(raw.match(/(\d+)INT/) || [0,0])[1];
++(raw.match(
+/(\d+)INT\b/
+) || [0,0])[1];
 
-// ONLY WRITE REAL STATS
-if (
-g > 0 ||
-a > 0 ||
-hits > 0 ||
-ta > 0 ||
-int > 0
-) {
+// =========================
+// WRITE PLAYER
+// =========================
 
 masterRows.push([
 
@@ -553,7 +600,7 @@ int,
 ""
 
 ]);
-}
+
 }
 
 // =========================
@@ -561,6 +608,10 @@ int,
 // =========================
 
 if (mode === "GOALIES") {
+
+// =========================
+// UNLINKED CHECK
+// =========================
 
 const alreadyUnlinked =
 unlinked.some(
@@ -570,7 +621,10 @@ normalize(name)
 );
 
 if (
-!isPlayerLinked(name, linked) &&
+!isPlayerLinked(
+name,
+linked
+) &&
 !alreadyUnlinked
 ) {
 
@@ -584,11 +638,20 @@ currentTeam
 ]
 ]
 );
+
 }
 
+// =========================
 // MUST MATCH 10/12
-if (!/^\d+\/\d+/.test(raw))
-continue;
+// =========================
+
+if (
+!/^\d+\/\d+/.test(raw)
+) continue;
+
+// =========================
+// PARSE SAVES/SHOTS
+// =========================
 
 const [
 saves,
@@ -599,14 +662,9 @@ shots
 .slice(1)
 .map(Number);
 
-// ONLY REAL GOALIES
-if (shots > 0) {
-
-const ga =
-Math.max(
-0,
-shots - saves
-);
+// =========================
+// SAVE ROW
+// =========================
 
 masterRows.push([
 
@@ -629,28 +687,31 @@ raw.includes("W")
 raw.includes("L")
 ? 1 : 0,
 
-ga === 0
+shots - saves === 0
 ? 1 : 0
 
 ]);
-}
+
 }
 }
 
 // =========================
-// 💾 WRITE MASTER STATS
+// 💾 MASTER STATS
 // =========================
 
-if (masterRows.length) {
+if (
+masterRows.length
+) {
 
 await appendSheetValues(
 "Master Stats!A3:M",
 masterRows
 );
+
 }
 
 // =========================
-// 🏆 WRITE GAME RESULT
+// 🏆 GAME RESULTS
 // =========================
 
 await appendSheetValues(
@@ -661,17 +722,13 @@ homeTeam,
 awayTeam,
 homeScore,
 awayScore,
-
-homeScore > awayScore
-? homeTeam
-: awayTeam,
-
+winner,
 resultType
 ]]
 );
 
 // =========================
-// 🔄 REBUILD EVERYTHING
+// 🔄 REBUILDS
 // =========================
 
 await rebuildAllStats();
@@ -687,7 +744,7 @@ interaction.client
 );
 
 // =========================
-// 🏒 GAME RECAP
+// 🏒 RECAP
 // =========================
 
 const recap = `__**Game #${gameId}**__
@@ -696,7 +753,7 @@ const recap = `__**Game #${gameId}**__
 ${recapNote}`;
 
 // =========================
-// 📡 SEND RECAP
+// 📡 SEND
 // =========================
 
 const channel =
@@ -715,7 +772,8 @@ content: recap.trim()
 return interaction.editReply(
 "✅ Game recorded + recap posted"
 );
-} 
+
+}
 
 async function rebuildAllStats() {
 
