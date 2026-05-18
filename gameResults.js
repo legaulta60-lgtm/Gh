@@ -91,8 +91,19 @@ async function handleStatLeaders(client) {
 
 try {
 
-const rows = await getSheetValues("Player Stats!A3:I");
-const goalieRows = await getSheetValues("Goalie Stats!A3:K");
+// =========================
+// 📥 LOAD SHEETS
+// =========================
+
+const rows =
+await getSheetValues(
+"Player Stats!A3:I1000"
+);
+
+const goalieRows =
+await getSheetValues(
+"Goalie Stats!A3:K1000"
+);
 
 if (!rows.length) return;
 
@@ -101,18 +112,35 @@ if (!rows.length) return;
 // =========================
 
 const players = rows
+
 .filter(r => r[0])
+
 .map(r => ({
-name: r[0],
-team: r[1],
 
-G: Number(r[3]) || 0,
-A: Number(r[4]) || 0,
-PTS: Number(r[5]) || 0,
+name:
+String(r[0] || "").trim(),
 
-HITS: Number(r[6]) || 0,
-TA: Number(r[7]) || 0,
-INT: Number(r[8]) || 0
+team:
+String(r[1] || "").trim(),
+
+G:
+Number(r[3]) || 0,
+
+A:
+Number(r[4]) || 0,
+
+PTS:
+Number(r[5]) || 0,
+
+H:
+Number(r[6]) || 0,
+
+TA:
+Number(r[7]) || 0,
+
+INT:
+Number(r[8]) || 0
+
 }));
 
 // =========================
@@ -120,46 +148,79 @@ INT: Number(r[8]) || 0
 // =========================
 
 const goalies = goalieRows
+
 .filter(r => r[0])
+
 .map(r => ({
 
-name: r[0],
-team: r[1],
+name:
+String(r[0] || "").trim(),
 
-GP: Number(r[2]) || 0,
-W: Number(r[3]) || 0,
-L: Number(r[4]) || 0,
-GA: Number(r[5]) || 0,
+team:
+String(r[1] || "").trim(),
 
-Saves: Number(r[6]) || 0,
-Shots: Number(r[7]) || 0,
+GP:
+Number(r[2]) || 0,
 
-SO: Number(r[8]) || 0,
+W:
+Number(r[3]) || 0,
 
-SV: Number(r[9]) || 0,
-GAA: Number(r[10]) || 0
+L:
+Number(r[4]) || 0,
+
+GA:
+Number(r[5]) || 0,
+
+SAVES:
+Number(r[6]) || 0,
+
+SHOTS:
+Number(r[7]) || 0,
+
+SO:
+Number(r[8]) || 0,
+
+SV:
+Number(r[9]) || 0,
+
+GAA:
+Number(r[10]) || 0
 
 }));
 
 // =========================
-// 🔢 SAFE TOP SORT
+// 🔢 TOP SORT
 // =========================
 
-function top(arr, key, asc = false) {
+function top(
+arr,
+key,
+asc = false
+) {
 
 return [...arr]
-.filter(p => p && p.name)
+
+.filter(p =>
+p &&
+p.name
+)
+
 .sort((a, b) => {
 
-const aVal = Number(a[key]) || 0;
-const bVal = Number(b[key]) || 0;
+const aVal =
+Number(a[key]) || 0;
+
+const bVal =
+Number(b[key]) || 0;
 
 return asc
 ? aVal - bVal
 : bVal - aVal;
 
 })
+
 .slice(0, 5);
+
 }
 
 // =========================
@@ -173,23 +234,38 @@ const img = {};
 // 🖼️ SAFE FILL
 // =========================
 
-function fill(list, statKey, prefix) {
+function fill(
+list,
+statKey,
+prefix
+) {
 
 for (let i = 0; i < 5; i++) {
 
-const p = list[i] || {};
+const p =
+list[i] || {};
 
-rep[`${prefix}N${i+1}`] =
-p.name || "";
+rep[
+`${prefix}N${i+1}`
+] = p.name || "";
 
-rep[`${prefix}P${i+1}`] =
-p[statKey] ?? "0";
+rep[
+`${prefix}P${i+1}`
+] = p[statKey] ?? "0";
 
-// SAFE LOGO LOOKUP
-const logo = TEAM_LOGOS[p.team];
+// =========================
+// TEAM LOGO
+// =========================
+
+const logo =
+TEAM_LOGOS[p.team];
 
 if (logo) {
-img[`${prefix}LOGO${i+1}`] = logo;
+
+img[
+`${prefix}LOGO${i+1}`
+] = logo;
+
 }
 }
 }
@@ -198,62 +274,156 @@ img[`${prefix}LOGO${i+1}`] = logo;
 // 📊 PLAYER LEADERS
 // =========================
 
-fill(top(players, "PTS"), "PTS", "P");
-fill(top(players, "G"), "G", "GO");
-fill(top(players, "A"), "A", "A");
-fill(top(players, "H"), "H", "H");
-fill(top(players, "TA"), "TA", "T");
-fill(top(players, "INT"), "INT", "I");
+fill(
+top(players, "PTS"),
+"PTS",
+"P"
+);
+
+fill(
+top(players, "G"),
+"G",
+"G"
+);
+
+fill(
+top(players, "A"),
+"A",
+"A"
+);
+
+fill(
+top(players, "H"),
+"H",
+"B"
+);
+
+fill(
+top(players, "TA"),
+"TA",
+"T"
+);
+
+fill(
+top(players, "INT"),
+"INT",
+"I"
+);
 
 // =========================
 // 🧤 GOALIE LEADERS
 // =========================
 
-const topSV = top(goalies, "SV");
-const topGAA = top(goalies, "GAA", true);
-const topSO = top(goalies, "SO");
+const topSV =
+top(goalies, "SV");
+
+const topGAA =
+top(goalies, "GAA", true);
+
+const topSO =
+top(goalies, "SO");
 
 for (let i = 0; i < 5; i++) {
 
-const sv = topSV[i] || {};
-const gaa = topGAA[i] || {};
-const so = topSO[i] || {};
+const sv =
+topSV[i] || {};
 
+const gaa =
+topGAA[i] || {};
+
+const so =
+topSO[i] || {};
+
+// =========================
 // SV%
-rep[`SVN${i+1}`] = sv.name || "";
-rep[`SV${i+1}`] = sv.SV ?? "0.000";
+// =========================
 
+rep[
+`SVN${i+1}`
+] = sv.name || "";
+
+rep[
+`SV${i+1}`
+] = sv.SV ?? "0.000";
+
+// =========================
 // GAA
-rep[`GNM${i+1}`] = gaa.name || "";
-rep[`GAA${i+1}`] = gaa.GAA ?? "0.00";
+// =========================
 
+rep[
+`GNM${i+1}`
+] = gaa.name || "";
+
+rep[
+`GAA${i+1}`
+] = gaa.GAA ?? "0.00";
+
+// =========================
 // SHUTOUTS
-rep[`SON${i+1}`] = so.name || "";
-rep[`SO${i+1}`] = so.SO ?? "0";
+// =========================
 
+rep[
+`SON${i+1}`
+] = so.name || "";
+
+rep[
+`SO${i+1}`
+] = so.SO ?? "0";
+
+// =========================
 // LOGOS
-if (TEAM_LOGOS[sv.team]) {
-img[`SVLOGO${i+1}`] = TEAM_LOGOS[sv.team];
+// =========================
+
+if (
+TEAM_LOGOS[sv.team]
+) {
+
+img[
+`SVLOGO${i+1}`
+] =
+TEAM_LOGOS[sv.team];
+
 }
 
-if (TEAM_LOGOS[gaa.team]) {
-img[`GLOGO${i+1}`] = TEAM_LOGOS[gaa.team];
+if (
+TEAM_LOGOS[gaa.team]
+) {
+
+img[
+`GLOGO${i+1}`
+] =
+TEAM_LOGOS[gaa.team];
+
 }
 
-if (TEAM_LOGOS[so.team]) {
-img[`SOLOGO${i+1}`] = TEAM_LOGOS[so.team];
+if (
+TEAM_LOGOS[so.team]
+) {
+
+img[
+`SOLOGO${i+1}`
+] =
+TEAM_LOGOS[so.team];
+
 }
 }
 
 // =========================
-// 🖼️ GENERATE IMAGE
+// 🖼️ CREATE IMAGE
 // =========================
 
-const image = await createImageFromTemplate(
-process.env.LEADERS_TEMPLATE_ID,
+const image =
+await createImageFromTemplate(
+
+process.env
+.LEADERS_TEMPLATE_ID,
+
 rep,
+
 "leaders.png",
+
 img
+
 );
 
 // =========================
@@ -269,7 +439,9 @@ STAT_LEADERS_CHANNEL_ID
 // 🗑 DELETE OLD
 // =========================
 
-if (statLeadersMessageId) {
+if (
+statLeadersMessageId
+) {
 
 try {
 
@@ -281,33 +453,43 @@ statLeadersMessageId
 await oldMsg.delete();
 
 } catch {}
+
 }
 
 // =========================
 // 📤 SEND NEW
 // =========================
 
-const msg = await channel.send({
+const msg =
+await channel.send({
+
 files: [
 {
 attachment: image,
 name: "leaders.png"
 }
 ]
+
 });
 
-statLeadersMessageId = msg.id;
+// SAVE MESSAGE ID
+statLeadersMessageId =
+msg.id;
 
 return msg;
 
-} catch (err) {
+}
+
+catch (err) {
 
 console.error(err);
 
 return console.error(
 "❌ Error loading stat leaders."
 );
+
 }
+
 }
 
   
